@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.julong.nucleicacid.dao.NucleicAcidMapper">
+
+    <update id="updateGenerator" >
+        UPDATE SM_OID_GENERATOR SET FCURROID = FCURROID + 1 WHERE FID = #{fid}
+    </update>
+    <select id="getGenerator" resultType="java.lang.Long">
+        SELECT FCURROID FROM SM_OID_GENERATOR WHERE FID =  #{fid}
+    </select>
+
+    <select id="getOutpatientInfo" resultType="com.julong.nucleicacid.model.OutpatientInfoOut">
+        select
+        --patientId	res	String	是	患者ID
+        to_char(pat.PATIENTID) AS patientId,
+        --patientName	res	String	是	患者姓名
+        pat.NAME AS patientName,
+        --gender	res	String	是	用户性别：M-男性 F-女性
+        decode(pat.SEX,1,'M',2,'F',to_char(pat.SEX)) AS gender,
+        --healthCardNo	res	String	是	健康卡号码
+        pat.HCNO AS healthCardNo,
+        --idCardNo	res	String	否	身份证
+        pat.IDNO AS idCardNo,
+        --birthday	res	String	否	出生日期
+        to_char(pat.BIRTHPLACE, 'yyyy-MM-dd') AS birthday,
+        --oppatNo	res	String	否	患者病历号
+        '-' AS oppatNo,
+        --phone	res	String	否	联系电话
+        pat.MOBILE AS phone,
+        --medicareCardNo	res	String	否	医保卡号
+        '-' AS medicareCardNo,
+        --homeAddress	res	String	否	家庭住址
+        pat.ADDRESS AS homeAddress,
+        --remark	res	String	否	备注
+        '-' AS remark,
+        --feeType	res	String	否	结算类型代码，1.医保 2自费 3公医 4省医
+        decode(pat.PAYORID, 3,'2',4,'3',9,'4',to_char(pat.PAYORID)) AS feeType,
+        --userTag	res	String	否	用户标签
+        '-' AS userTag
+        from PA_DATA_PATIENT pat
+        <where>
+            <if test=" idCardNo!=null and idCardNo !=''">
+            and pat.IDNO = #{idCardNo}
+            </if>
+            <if test=" healthCardNo!=null and healthCardNo !=''">
+            AND pat.HCNO = #{healthCardNo}
+            </if>
+            <if test=" patientId!=null and patientId !=''">
+            AND to_char(pat.PATIENTID) = #{patientId}
+            </if>
+
+        </where>
+    </select>
+
+
+
+</mapper>

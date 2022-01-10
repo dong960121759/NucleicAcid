@@ -1,0 +1,25 @@
+spring:
+  datasource:
+    username: HYHIS
+    password: hyhis
+    driver-class-name: oracle.jdbc.driver.OracleDriver
+    #jdbc-url: jdbc:oracle:thin:@10.53.86.200:1521/ORCL
+    url: jdbc:oracle:thin:@10.0.0.3:1521:orcl
+    type: com.alibaba.druid.pool.DruidDataSource
+
+server:
+  #端口号
+  port: 8080
+
+mybatis-plus:
+  mapper-locations: classpath*:/mapper/**/*.xml
+  configuration:
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+    call-setters-on-nulls: true
+
+logging:
+  config: classpath:logback-spring.xml
+_defaultPayorID: 3
+_defaultPlanID: 7
+_defaultWxUserID: 999999
+
