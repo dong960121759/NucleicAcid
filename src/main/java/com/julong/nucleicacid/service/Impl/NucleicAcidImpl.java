@@ -1,14 +1,11 @@
 package com.julong.nucleicacid.service.Impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
-import com.julong.nucleicacid.dao.NucleicAcidMapper;
-import com.julong.nucleicacid.dao.PatientinfoFOMapper;
-import com.julong.nucleicacid.entity.PatientinfoFO;
-import com.julong.nucleicacid.model.CreateNewPatientIn;
-import com.julong.nucleicacid.model.CreateNewPatientOut;
-import com.julong.nucleicacid.model.OutpatientInfoIn;
-import com.julong.nucleicacid.model.OutpatientInfoOut;
+import com.julong.nucleicacid.dao.*;
+import com.julong.nucleicacid.entity.*;
+import com.julong.nucleicacid.model.*;
 import com.julong.nucleicacid.service.NucleicAcid;
+import com.julong.nucleicacid.utils.AgeUtil;
 import com.julong.nucleicacid.utils.JlV60DictInfo;
 import com.julong.nucleicacid.utils.KingDeeCodeInfo;
 import lombok.extern.slf4j.Slf4j;
@@ -17,12 +14,11 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.util.Calendar;
-import java.util.Date;
-import java.util.List;
+import java.util.*;
 
 /**
  * @className: NoSourcePoolImpl
@@ -40,35 +36,41 @@ public class NucleicAcidImpl implements NucleicAcid {
     private Long _defaultPlanID; //默认支付计划
     @Value("${_defaultWxUserID}")
     private Long _defaultWxUserID; //默认操作员
+    @Value("${_defaultHsjcDrID}")
+    private Long _defaultHsjcDrID; //默认医生
+    @Value("${_defaultHsjcDeptID}")
+    private Long  _defaultHsjcDeptID;
+    @Value("${_defaultHsjcGroupID}") //核酸默认组号
+    private Long  _defaultHsjcGroupID;
+
 
     private final NucleicAcidMapper nucleicAcidMapper;
     private final PatientinfoFOMapper patientinfoFOMapper;
+    private final PatientCardFOMapper patientCardFOMapper;
+    private final GeneratorNoMapper generatorNoMapper;
+    private final SmOidGeneratorMapper smOidGeneratorMapper;
+    private final PaCLRegisterMapper paCLregisterMapper;
+    private final PcClrecipeMapper pcClrecipeMapper;
+    private final OrderGroupMapper orderGroupMapper;
+    private final OrderItemMapper orderItemMapper;
+    private final ClRecentryMapper clRecentryMapper;
 
-    public NucleicAcidImpl(NucleicAcidMapper nucleicAcidMapper, PatientinfoFOMapper patientinfoFOMapper) {
+    public NucleicAcidImpl(NucleicAcidMapper nucleicAcidMapper, PatientinfoFOMapper patientinfoFOMapper, PatientCardFOMapper patientCardFOMapper, GeneratorNoMapper generatorNoMapper, SmOidGeneratorMapper smOidGeneratorMapper, PaCLRegisterMapper paCLregisterMapper, PcClrecipeMapper pcClrecipeMapper, OrderGroupMapper orderGroupMapper, OrderItemMapper orderItemMapper, ClRecentryMapper clRecentryMapper) {
         this.nucleicAcidMapper = nucleicAcidMapper;
         this.patientinfoFOMapper = patientinfoFOMapper;
+        this.patientCardFOMapper = patientCardFOMapper;
+        this.generatorNoMapper = generatorNoMapper;
+        this.smOidGeneratorMapper = smOidGeneratorMapper;
+        this.paCLregisterMapper = paCLregisterMapper;
+        this.pcClrecipeMapper = pcClrecipeMapper;
+        this.orderGroupMapper = orderGroupMapper;
+        this.orderItemMapper = orderItemMapper;
+        this.clRecentryMapper = clRecentryMapper;
     }
-
-    @Override
-    public OutpatientInfoOut getOutpatientInfo(OutpatientInfoIn infoIn) {
-        OutpatientInfoOut infoOut;
-
-        if(infoIn.getIdCardNo()==null && infoIn.getPatientId()==null && infoIn.getHealthCardNo()==null){
-            infoOut = new OutpatientInfoOut();
-            infoOut.setResultCode(KingDeeCodeInfo.FAILED);
-            infoOut.setResultDesc("idCardNo、healthCardNo、patientId不能同时为空!");
-            return infoOut;
-        }
-        infoOut = nucleicAcidMapper.getOutpatientInfo(infoIn);
-        if (infoOut==null){
-            infoOut = new OutpatientInfoOut();
-            infoOut.setResultCode(KingDeeCodeInfo.FAILED);
-            infoOut.setResultDesc("未查到患者数据!");
-        }else {
-            infoOut.setResultCode(KingDeeCodeInfo.SUCCESS);
-        }
-        return infoOut;
-    }
+    /**
+     * 获得出生日期
+     * 
+     */
     private Date getBirthdayByIDNO(String id){
         Date birthD = null;
         String birthS = null;
@@ -98,6 +100,59 @@ public class NucleicAcidImpl implements NucleicAcid {
         }
         return birthD;
     }
+
+    /**
+     * 生成OID
+     */
+    private Long smOidGenerate(String  fid) {
+        SmOidGeneratorFO smOidGeneratorFO = smOidGeneratorMapper.selectById(fid);
+        Long fcurrOid =smOidGeneratorFO.getFcurrOid();
+        smOidGeneratorFO.setFcurrOid(fcurrOid+1);
+        smOidGeneratorMapper.updateById(smOidGeneratorFO);
+        smOidGeneratorFO = smOidGeneratorMapper.selectById(fid);
+
+        return smOidGeneratorFO.getFcurrOid();
+
+    }
+    /**
+     * 生成卡号
+     * 
+     */
+    private String smNoGenerate(Long noType) {
+        QueryWrapper<GeneratorNoFO> queryWrapper=new QueryWrapper<>();
+
+        queryWrapper.eq("notype",noType);
+
+        GeneratorNoFO generatorNoFO = generatorNoMapper.selectOne(queryWrapper);
+        if (generatorNoFO!=null) {
+            Long  currentNo = generatorNoFO.getCurrentNo();
+            generatorNoFO.setCurrentNo(currentNo+1);
+            generatorNoMapper.updateById(generatorNoFO);
+        }
+        return nucleicAcidMapper.getGeneratorNo(noType);
+
+    }
+    @Override
+    public OutpatientInfoOut getOutpatientInfo(OutpatientInfoIn infoIn) {
+        OutpatientInfoOut infoOut;
+
+        if(infoIn.getIdCardNo()==null && infoIn.getPatientId()==null && infoIn.getHealthCardNo()==null){
+            infoOut = new OutpatientInfoOut();
+            infoOut.setResultCode(KingDeeCodeInfo.FAILED);
+            infoOut.setResultDesc("idCardNo、healthCardNo、patientId不能同时为空!");
+            return infoOut;
+        }
+        infoOut = nucleicAcidMapper.getOutpatientInfo(infoIn);
+        if (infoOut==null){
+            infoOut = new OutpatientInfoOut();
+            infoOut.setResultCode(KingDeeCodeInfo.FAILED);
+            infoOut.setResultDesc("未查到患者数据!");
+        }else {
+            infoOut.setResultCode(KingDeeCodeInfo.SUCCESS);
+        }
+        return infoOut;
+    }
+
 
     @Override
     public CreateNewPatientOut createNewPatient(CreateNewPatientIn newPatientIn) {
@@ -137,11 +192,10 @@ public class NucleicAcidImpl implements NucleicAcid {
         }
         //2.未建卡，进行建卡
         PatientinfoFO fo = new PatientinfoFO();
-        System.out.println(_defaultPayorID);
-        System.out.println(_defaultPlanID);
 
         fo.setPayorid(_defaultPayorID) ;
         fo.setPlanid(_defaultPlanID) ;
+        fo.setName(newPatientIn.getPatientName()) ;
         fo.setBirthday(getBirthdayByIDNO(newPatientIn.getIdCardNo().trim()));
 
         //性别默认
@@ -162,11 +216,290 @@ public class NucleicAcidImpl implements NucleicAcid {
         fo.setInputtime(cal.getTime() );
         fo.setInputoper( _defaultWxUserID);
         fo.setVersionid(cal.getTime());
-        //fo.setHcno(
-        patientinfoFOMapper.insert(fo);
+
+        fo.setPatientid(smOidGenerate("PA_DATA_PATIENT"));
+        String cardNo =smNoGenerate(1L);
+        fo.setHcno(cardNo);
+
+        if (patientinfoFOMapper.insert(fo)>0) {
+
+            PatientCardFO foCard = new PatientCardFO();
+            foCard.setOid(smOidGenerate("PA_DATA_PATIENTCARD"));
+            foCard.setCardno(cardNo);
+            foCard.setPatientid(fo.getPatientid());
+            foCard.setInputoper(_defaultWxUserID);
+            foCard.setInputtime(cal.getTime());
+            if (patientCardFOMapper.insert(foCard)>0) {
+
+                newPatientOut = new CreateNewPatientOut();
+                newPatientOut.setResultCode(KingDeeCodeInfo.SUCCESS);
+                newPatientOut.setPatientId(String.valueOf(fo.getPatientid()));
+                newPatientOut.setHealthCardNo(cardNo);
+                return newPatientOut;
+            }else {
+                newPatientOut = new CreateNewPatientOut();
+                newPatientOut.setResultCode(KingDeeCodeInfo.FAILED);
+                newPatientOut.setResultDesc("保存患者信息卡失败！") ;
+                return newPatientOut;
+            }
+        }else {
+            newPatientOut = new CreateNewPatientOut();
+            newPatientOut.setResultCode(KingDeeCodeInfo.FAILED);
+            newPatientOut.setResultDesc("保存患者信息失败！") ;
+            return newPatientOut;
+        }
+    }
+
+    /**
+     * 1.2核酸检测预约项目类型
+     * 接口代码	cstmr.nucleic.getItem
+     * 说明	通过调用该接口获取可预约的核酸检测项目类型（有部分医院多类项目，不同价钱）
+     *
+     */
+    @Override
+    public GetItemOut<GetItemOutSet> nucleicGetItem(GetItemIn getItemIn) {
 
 
-        return new CreateNewPatientOut();
+        GetItemOut<GetItemOutSet> getItemOut = new GetItemOut<>();
+        List<GetItemOutSet> getItemOutSets = nucleicAcidMapper.nucleicGetItem(Long.valueOf(getItemIn.getItemId()));
+        if (getItemOutSets!=null) {
+            getItemOut.setSet(getItemOutSets);
+
+            getItemOut.setResultCode(KingDeeCodeInfo.SUCCESS);
+            getItemOut.setResultDesc("") ;
+        }else {
+            getItemOut.setResultCode(KingDeeCodeInfo.FAILED);
+            getItemOut.setResultDesc("查询核酸检测预约项目类型失败！") ;
+        }
+        return getItemOut;
+    }
+
+    /**
+     * 1.4核酸检测预约下单
+     * 接口代码	cstmr. nucleic.addOrder
+     * 说明	通过调用该接口预约申请核酸检测项目开单
+     *
+     * 
+     */
+    @Override
+    public AddOrderOut nucleicAddOrder(AddOrderIn addOrderIn) {
+        String cardNo=addOrderIn.getHealthCardNo();
+        String examineDate;
+        AddOrderOut addOrderOut =new AddOrderOut();
+        if(cardNo == null || "".equals(cardNo)) {
+            addOrderOut.setResultCode(KingDeeCodeInfo.FAILED);
+            addOrderOut.setResultDesc("卡号 为 空!") ;
+            return addOrderOut ;
+        }
+        QueryWrapper<PatientinfoFO> queryWrapper = new QueryWrapper<>();
+        queryWrapper.eq("hcno", cardNo);
+        queryWrapper.eq("isdelete", "0");
+        List<PatientinfoFO>  plist =  patientinfoFOMapper.selectList(queryWrapper);
+        if (plist.size() == 0)   {
+            addOrderOut.setResultCode(KingDeeCodeInfo.FAILED);
+            addOrderOut.setResultDesc(cardNo+ "没有找到病人！") ;
+            return addOrderOut ;
+        }
+        PatientinfoFO patientinfoFO = plist.get(0);
+
+        Date serviceTime = Calendar.getInstance().getTime( ) ;
+        examineDate =  new SimpleDateFormat("yyyy-MM-dd").format( serviceTime ) ;
+
+        QueryWrapper<PaCLregisterFO> queryRegister = new QueryWrapper<>();
+        queryRegister.eq("hcno", cardNo);
+        queryRegister.eq("patientid", patientinfoFO.getPatientid());
+        queryRegister.eq("to_char(regtime,'yyyy-mm-dd')", examineDate);
+        queryRegister.eq("REGDOCTOR", _defaultHsjcDrID);
+
+        List<PaCLregisterFO>  regList =  paCLregisterMapper.selectList(queryRegister);
+        boolean isChild = false ;
+        PaCLregisterFO gh;
+        if (regList.size()<1){
+            gh = new PaCLregisterFO();
+
+            gh.setPatientid( patientinfoFO.getPatientid() );
+            gh.setHcno(patientinfoFO.getHcno() );
+            gh.setPayorid( _defaultPayorID ); //3
+            gh.setPlanid( _defaultPlanID );//7
+            gh.setName(patientinfoFO.getName());
+            gh.setSex(patientinfoFO.getSex());
+            gh.setInputoper( _defaultHsjcDrID  );
+            gh.setInputtime(serviceTime);
+            gh.setAge(AgeUtil.computerAge(serviceTime,patientinfoFO.getBirthday()));
+            gh.setBirthday(patientinfoFO.getBirthday() );
+            gh.setIdno(patientinfoFO.getIdno() );
+            gh.setAddress(patientinfoFO.getAddress() );
+
+            gh.setRegtime( serviceTime );
+            gh.setRegcatalog(1L);
+            gh.setRegdept( _defaultHsjcDeptID ); //54
+            gh.setRegdoctor( _defaultHsjcDrID ); //319
+            gh.setRegtype(1L);
+            gh.setRegstatus(1L);
+            gh.setEncounterstatus(2L);
+
+            Long agea;
+            agea = AgeUtil.intAge(gh.getAge());
+
+            if (agea != null && agea <= 14 ) {
+                gh.setIschild("1");
+                isChild = true ;
+            }else {
+                gh.setIschild("0");
+            }
+            gh.setEncounterid(smOidGenerate("PA_CL_DATA_REGISTER"));
+            try {
+              Integer i =  paCLregisterMapper.insert(gh);//保存：挂号表
+                System.out.println(i);
+            } catch (Exception e) {
+                addOrderOut.setResultCode(KingDeeCodeInfo.FAILED);
+                addOrderOut.setResultDesc(cardNo+ " 没有找到挂号记录！") ;
+                return addOrderOut ;
+            }
+
+        }else {
+            gh = regList.get(0);
+        }
+        PcClrecipeFO recipe = new PcClrecipeFO( );
+
+        recipe.setRecipetype(1L);
+        recipe.setEncounterid( gh.getEncounterid() );
+        recipe.setPatientid(patientinfoFO.getPatientid());
+        recipe.setCataid(8L);
+        recipe.setName( patientinfoFO.getName() );
+        recipe.setSex( patientinfoFO.getSex() );
+        recipe.setAge(AgeUtil.computerAge(serviceTime, patientinfoFO.getBirthday()));
+        recipe.setAddress( patientinfoFO.getAddress()  );
+        recipe.setDeptid(_defaultHsjcDeptID);
+        recipe.setDocid( _defaultHsjcDrID );
+
+        recipe.setInputoper( _defaultHsjcDrID );
+        recipe.setInputtime( serviceTime );
+        recipe.setRecipeclass(1L);
+        recipe.setIsmanual("1");
+        recipe.setIsmain("1");
+        recipe.setVersionid(serviceTime);
+
+        recipe.setRecipeid(smOidGenerate("PC_CL_DATA_RECIPE"));
+        Integer cfh = pcClrecipeMapper.insert(recipe);
+        System.out.println(cfh);
+
+        if (cfh<1){
+            addOrderOut.setResultCode(KingDeeCodeInfo.FAILED);
+            addOrderOut.setResultDesc(cardNo+ " 生成处方号错误！") ;
+            return addOrderOut ;
+        }
+        List<ClRecentryFO> clRecentryFOS = new ArrayList<>();
+
+
+        ClRecentryFO recipeEntryVO = new ClRecentryFO();
+        recipeEntryVO.setRecipeid(recipe.getRecipeid());
+
+        recipeEntryVO.setEntrytype(99L); //明细类型，组套用99
+        recipeEntryVO.setRowstatus(0L);						//行状态
+        recipeEntryVO.setIsitem("0");					//是否医嘱项（如果不为医嘱项，则为医嘱套）
+        recipeEntryVO.setAliasid(_defaultHsjcGroupID);
+        recipeEntryVO.setItemid(_defaultHsjcGroupID);								//项目ID
+        recipeEntryVO.setRowno(1L);
+        recipeEntryVO.setGroupno(1L);
+        recipeEntryVO.setDiscountrate(new BigDecimal("100"));			//折扣率，默认100%
+        recipeEntryVO.setIsdisplay("0");
+        recipeEntryVO.setInputtime( serviceTime );
+
+
+        QueryWrapper<OrderGroupFO> queryOrderGroup = new QueryWrapper<>();
+        queryOrderGroup.eq("groupid",_defaultHsjcGroupID);
+        OrderGroupFO orderGroupFO = orderGroupMapper.selectOne(queryOrderGroup);
+
+        if(orderGroupFO.getIsfixedprice() != null && "".equals(orderGroupFO.getIsfixedprice() ) ){			//是否固定价格
+            recipeEntryVO.setPrice( nucleicAcidMapper.getGroupUnitPrice(_defaultHsjcGroupID) );			//单价
+            recipeEntryVO.setIscharge("1");				//是否收费（对于由医嘱套生成的明细，不能重复收费）
+        }else{
+            recipeEntryVO.setPrice(null);																	//单价
+            recipeEntryVO.setIscharge("0");				//是否收费（对于由医嘱套生成的明细，不能重复收费）
+        }
+
+        recipeEntryVO.setItemsource( 1L );	//项目来源，默认1 "录入"
+
+        //取单位，每次用量,默认单位为空，数量为1
+        recipeEntryVO.setUnitid(null);									//以医嘱项单位为单位
+        recipeEntryVO.setQuantity(new BigDecimal("1"));				//默认数量为1
+        recipeEntryVO.setTotal(new BigDecimal("1"));					//默认数量为1
+        recipeEntryVO.setQuanunitid(null);
+
+        BigDecimal amount = nucleicAcidMapper.getGroupAmount(_defaultHsjcGroupID);
+        recipeEntryVO.setAmount( amount );
+        recipeEntryVO.setActualamount( amount );
+
+        //生成主键
+        recipeEntryVO.setEntryid(smOidGenerate("PC_CL_DATA_RECIPEENTRY"));
+
+        clRecentryFOS.add( recipeEntryVO );
+
+        List<Long> itemIdList = nucleicAcidMapper.getGroupItems(_defaultHsjcGroupID);
+        int rowNo = 2;
+        for (Long itemId: itemIdList){
+            recipeEntryVO.setRecipeid(recipe.getRecipeid());
+
+            recipeEntryVO.setEntrytype( nucleicAcidMapper.getOrderItemPretype( itemId ));
+
+            AbOrderItemFO orderItem = orderItemMapper.selectById(itemId) ;
+            recipeEntryVO.setGroupno(1L);
+            recipeEntryVO.setRowno((long) rowNo);
+            recipeEntryVO.setRowstatus(0L);
+            recipeEntryVO.setAliasid(itemId);
+            recipeEntryVO.setItemid(itemId);
+            recipeEntryVO.setIsconfirm("1");
+            recipeEntryVO.setConfirmoper(319L);
+            recipeEntryVO.setConfirmtime( serviceTime );
+            recipeEntryVO.setQuantity(new BigDecimal("1"));
+            recipeEntryVO.setUnitid( orderItem.getClunitid() );
+            recipeEntryVO.setIsitem("1");
+            recipeEntryVO.setTotal(new BigDecimal("1"));
+            recipeEntryVO.setIsdisplay("0");
+            recipeEntryVO.setIscharge( "1" );
+            recipeEntryVO.setInputtime( serviceTime );
+
+            recipeEntryVO.setExeutedept( 129L ) ;
+
+            //设置单价
+            if ( isChild &&  orderItem.getChildplusprice() != null ) {
+                recipeEntryVO.setPrice(orderItem.getChildplusprice());
+                recipeEntryVO.setImmprice(orderItem.getClprice());
+                recipeEntryVO.setImmamount(orderItem.getClprice().setScale(2, BigDecimal.ROUND_HALF_UP));
+            }else{
+                recipeEntryVO.setPrice( orderItem.getClprice() );				//单价
+            }
+
+            recipeEntryVO.setDiscountrate(new BigDecimal(100));
+            recipeEntryVO.setQuanunitid(orderItem.getClunitid());					//数量单位
+            recipeEntryVO.setAmount(recipeEntryVO.getPrice());
+            recipeEntryVO.setActualamount(recipeEntryVO.getPrice());
+
+            recipeEntryVO.setItemsource( 10L );
+
+            recipeEntryVO.setEntryid(smOidGenerate("PC_CL_DATA_RECIPEENTRY"));
+
+            clRecentryFOS.add(recipeEntryVO);
+            rowNo++;
+
+        }
+        if (  clRecentryFOS.size()==0   ) {
+            addOrderOut.setResultCode(KingDeeCodeInfo.FAILED);
+            addOrderOut.setResultDesc(cardNo+ " 2生成处方表错误!") ;
+            return addOrderOut ;
+        }
+        for (ClRecentryFO clRecentryFO: clRecentryFOS){
+            clRecentryMapper.insert(clRecentryFO);
+        }
+        KingDeeNucleicLogFO kingDeeNucleicLogFO = new KingDeeNucleicLogFO();
+        kingDeeNucleicLogFO.setHealthCardNo(cardNo);
+        kingDeeNucleicLogFO.setIdCardNo(patientinfoFO.getIdno());
+        kingDeeNucleicLogFO.setPatientName(patientinfoFO.getName());
+        kingDeeNucleicLogFO.setPatientId(String.valueOf(patientinfoFO.getPatientid()));
+        kingDeeNucleicLogFO.setPhone(patientinfoFO.getMobile());
+        kingDeeNucleicLogFO.setItemId(String.valueOf(_defaultHsjcGroupID));
+        return null;
     }
 
 }

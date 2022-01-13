@@ -1,9 +1,6 @@
 package com.julong.nucleicacid.controller;
 
-import com.julong.nucleicacid.model.CreateNewPatientIn;
-import com.julong.nucleicacid.model.OutpatientInfoIn;
-import com.julong.nucleicacid.model.OutpatientInfoOut;
-import com.julong.nucleicacid.model.RequestIn;
+import com.julong.nucleicacid.model.*;
 import com.julong.nucleicacid.service.NucleicAcid;
 import com.julong.nucleicacid.utils.XmlUtil;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -44,10 +41,10 @@ public class NucleicAcidController {
                 return XmlUtil.pojoToXml(nucleicAcidImpl.createNewPatient((CreateNewPatientIn) XmlUtil.xmlToPojo(CreateNewPatientIn.class,inXml)));
             case "getItem":
                 //1.2核酸检测预约项目类型
-                break;
+                return XmlUtil.pojoToXml(nucleicAcidImpl.nucleicGetItem((GetItemIn) XmlUtil.xmlToPojo(GetItemIn.class,inXml)));
             case "addOrder":
                 //1.4核酸检测预约下单
-                break;
+                return XmlUtil.pojoToXml((nucleicAcidImpl.nucleicAddOrder((AddOrderIn) XmlUtil.xmlToPojo(AddOrderIn.class,inXml))));
         }
         return null;
     }

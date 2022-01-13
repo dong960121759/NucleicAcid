@@ -1,12 +1,7 @@
 package com.julong.nucleicacid.service;
 
-import com.julong.nucleicacid.model.CreateNewPatientIn;
-import com.julong.nucleicacid.model.CreateNewPatientOut;
-import com.julong.nucleicacid.model.OutpatientInfoIn;
-import com.julong.nucleicacid.model.OutpatientInfoOut;
+import com.julong.nucleicacid.model.*;
 import org.springframework.stereotype.Service;
-
-import java.io.OutputStream;
 
 /**
  * @className: NucleicAcid 核酸预约接口
@@ -29,4 +24,22 @@ public interface NucleicAcid {
      * 说明	可以通过本接口在HIS系统中创建新的患者档案
      */
     CreateNewPatientOut createNewPatient(CreateNewPatientIn createNewPatientIn);
+
+    /**
+     * 1.2核酸检测预约项目类型
+     * 接口代码	cstmr.nucleic.getItem
+     * 说明	通过调用该接口获取可预约的核酸检测项目类型（有部分医院多类项目，不同价钱）
+     * @param getItemIn
+     * @return
+     */
+    GetItemOut<GetItemOutSet> nucleicGetItem(GetItemIn getItemIn);
+
+    /**
+     * 1.4核酸检测预约下单
+     * 接口代码	cstmr. nucleic.addOrder
+     * 说明	通过调用该接口预约申请核酸检测项目开单
+     * @param addOrderIn
+     * @return
+     */
+    AddOrderOut nucleicAddOrder(AddOrderIn addOrderIn);
 }

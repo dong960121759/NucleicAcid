@@ -22,4 +22,7 @@ logging:
 _defaultPayorID: 3
 _defaultPlanID: 7
 _defaultWxUserID: 999999
+_defaultHsjcDrID: 319
+_defaultHsjcDeptID: 54
+_defaultHsjcGroupID: 17170
 

@@ -2,11 +2,8 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.julong.nucleicacid.dao.NucleicAcidMapper">
 
-    <update id="updateGenerator" >
-        UPDATE SM_OID_GENERATOR SET FCURROID = FCURROID + 1 WHERE FID = #{fid}
-    </update>
-    <select id="getGenerator" resultType="java.lang.Long">
-        SELECT FCURROID FROM SM_OID_GENERATOR WHERE FID =  #{fid}
+    <select id="getGeneratorNo" resultType="java.lang.String">
+        select lpad( to_char(CURRENTNO) ,nolength , nvl(prefix,'0') )  from SM_NOGENERATOR where notype = #{noType}
     </select>
 
     <select id="getOutpatientInfo" resultType="com.julong.nucleicacid.model.OutpatientInfoOut">
@@ -51,7 +48,36 @@
 
         </where>
     </select>
+    <select id="nucleicGetItem" resultType="com.julong.nucleicacid.model.GetItemOutSet">
+        select
+        --itemId	set	String	是	套餐代码
+        to_char(abo.ITEMID) AS itemId,
+        --itemName	set	String	是	套餐名称
+        abo.ITEMNAME AS itemName,
+        --totalFee	set	String	是	套餐总金额，单位：分
+        abo.PRICE AS totalFee
+        from AB_ORDERITEM abo, AB_ORDERGROUPITEM abg
+        where abg.ITEMID = abo.ITEMID and abg.GROUPID = #{groupId}
 
+
+    </select>
+    <select id="getGroupItems" resultType="java.lang.Long">
+        select a.ITEMID as xmid  from  AB_ORDERGROUPITEM  a
+		where a.GROUPID = #{groupId}
+    </select>
+    <select id="getGroupUnitPrice" resultType="java.math.BigDecimal">
+        select sum(nvl(b.CLPRICE,0) ) as zdj from AB_ORDERGROUP a , ab_orderitem b , AB_ORDERGROUPITEM r
+		where a.GROUPID = r.GROUPID and r.ITEMID = b.ITEMID and a.GROUPID = #{groupId}
+    </select>
+    <select id="getGroupAmount" resultType="java.math.BigDecimal">
+        select sum( nvl(r.AMOUNT,1)  * nvl(b.CLPRICE,0) ) as zdj from AB_ORDERGROUP a , ab_orderitem b  , AB_ORDERGROUPITEM r
+		where  a.GROUPID = r.GROUPID and r.ITEMID = b.ITEMID and a.GROUPID = #{groupId}
+
+    </select>
+    <select id="getOrderItemPretype" resultType="java.lang.Long">
+        select nvl( p.PRETYPE,2)  as lb   from ab_orderitem o , PC_PRESCRIPTIONSUBCATALOG p
+		where o.CATALOGID = p.PRESUBCATAID and o.ITEMID = #{itemId}
+    </select>
 
 
 </mapper>
