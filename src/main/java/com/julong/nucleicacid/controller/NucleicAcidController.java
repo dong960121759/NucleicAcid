@@ -47,22 +47,22 @@ public class NucleicAcidController {
                 return XmlUtil.pojoToXml((nucleicAcidImpl.nucleicAddOrder((AddOrderIn) XmlUtil.xmlToPojo(AddOrderIn.class,inXml))));
             case "getPayInfo":
                 //2.2.3.1待缴费记录查询
-                return XmlUtil.pojoToXml((nucleicAcidImpl.getPayInfo((AddOrderIn) XmlUtil.xmlToPojo(AddOrderIn.class,inXml))));
+                return XmlUtil.pojoToXml((nucleicAcidImpl.getPayInfo((GetPayInfoIn) XmlUtil.xmlToPojo(GetPayInfoIn.class,inXml))));
             case "getPaybillfee":
             //2.2.3.2获取待缴费用信息
-                return XmlUtil.pojoToXml((nucleicAcidImpl.getPaybillfee((AddOrderIn) XmlUtil.xmlToPojo(AddOrderIn.class,inXml))));
+                return XmlUtil.pojoToXml((nucleicAcidImpl.getPaybillfee((GetPaybillfeeIn) XmlUtil.xmlToPojo(GetPaybillfeeIn.class,inXml))));
 
             case "pay":
             //2.2.3.3待缴费记录支付
-                return XmlUtil.pojoToXml((nucleicAcidImpl.pay((AddOrderIn) XmlUtil.xmlToPojo(AddOrderIn.class,inXml))));
+                return XmlUtil.pojoToXml((nucleicAcidImpl.pay((PayIn) XmlUtil.xmlToPojo(PayIn.class,inXml))));
 
             case "getCompletedPayInfo":
             //2.2.3.4已缴费记录查询
-                return XmlUtil.pojoToXml((nucleicAcidImpl.getCompletedPayInfo((AddOrderIn) XmlUtil.xmlToPojo(AddOrderIn.class,inXml))));
+                return XmlUtil.pojoToXml((nucleicAcidImpl.getCompletedPayInfo((GetCompletedPayInfoIn) XmlUtil.xmlToPojo(GetCompletedPayInfoIn.class,inXml))));
 
             case "getCompletedPayDetailInfo":
             //2.2.3.5 已缴费记录明细查询
-                return XmlUtil.pojoToXml((nucleicAcidImpl.getCompletedPayDetailInfo((AddOrderIn) XmlUtil.xmlToPojo(AddOrderIn.class,inXml))));
+                return XmlUtil.pojoToXml((nucleicAcidImpl.getCompletedPayDetailInfo((GetCompletedPayDetailInfoIn) XmlUtil.xmlToPojo(GetCompletedPayDetailInfoIn.class,inXml))));
 
         }
         return null;

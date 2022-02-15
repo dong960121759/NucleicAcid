@@ -49,4 +49,29 @@ public interface NucleicAcid {
      * 接口代码	outpatient.getPayInfo
      * 说明	通过调用该接口获取患者的待缴费就诊记录
      */
+    ResultOut<GetPayInfoOutSet> getPayInfo(GetPayInfoIn getPayInfoIn);
+    /**
+     * 2.2.3.2 获取待缴费用信息
+     * 接口代码	outpatient.getPaybillfee
+     * 说明	可以通过调用本接口获取某次就诊中指定处方的待缴费费用信息
+     */
+    GetPaybillfeeOut getPaybillfee(GetPaybillfeeIn getPaybillfeeIn);
+    /**
+     * 2.2.3.3 待缴费记录支付
+     * 接口代码	outpatient.pay
+     * 说明	通过调用本接口，将门诊处方的支付结果同步到HIS，并且执行相应的收费逻辑处理。
+     */
+    PayOut pay(PayIn payIn);
+    /**
+     * 2.2.3.4 已缴费记录查询
+     * 接口代码	outpatient.getCompletedPayInfo
+     * 说明	通过调用本接口获取用户已缴费记录。
+     */
+    ResultOut<GetCompletedPayInfoOutSet> getCompletedPayInfo(GetCompletedPayInfoIn getCompletedPayInfoIn);
+    /**
+     * 2.2.3.5 已缴费记录明细查询
+     * 接口代码	outpatient.getCompletedPayDetailInfo
+     * 说明	通过调用该接口获取用户已缴费记录的详细信息。
+     */
+    GetCompletedPayDetailInfoOut getCompletedPayDetailInfo(GetCompletedPayDetailInfoIn getCompletedPayDetailInfoIn);
 }

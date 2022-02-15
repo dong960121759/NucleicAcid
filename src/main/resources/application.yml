@@ -25,4 +25,5 @@ _defaultWxUserID: 999999
 _defaultHsjcDrID: 319
 _defaultHsjcDeptID: 54
 _defaultHsjcGroupID: 17170
+_defaultRecipeLimitDays: 1
 
