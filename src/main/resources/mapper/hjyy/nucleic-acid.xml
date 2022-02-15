@@ -78,6 +78,32 @@
         select nvl( p.PRETYPE,2)  as lb   from ab_orderitem o , PC_PRESCRIPTIONSUBCATALOG p
 		where o.CATALOGID = p.PRESUBCATAID and o.ITEMID = #{itemId}
     </select>
-
+    <select id="">
+       --/**clinicSeq	payListInfo	String	是	就诊流水号*/
+       --/**clinicTime	payListInfo	String	是	就诊日期*/
+       --/**hospitalId	payListInfo	String	是	医院代码*/
+       --/**deptId	payListInfo	String	是	接诊科室代码*/
+       --/**deptName	payListInfo	String	是	接诊科室名称*/
+       --/**doctorId	payListInfo	String	是	接诊医生代码*/
+       --/**doctorName	payListInfo	String	是	接诊医生姓名*/
+       --/**payAmout	payListInfo	String	是	自费金额(单位：分)*/
+       --/**recPayAmout	payListInfo	String	是	统筹金额(单位：分)*/
+       --/**totalPayAmout	payListInfo	String	是	总金额(单位：分)*/
+       --/**receiptId	payListInfo	String	是	收据ID*/
+       --/**chargeDate	payListInfo	String	是	缴费日期*/
+       --/**remark	payListInfo	String	否	备注*/
+       --/**orderId	payListInfo	String	否	支付平台订单号*/
+       --/**allowRefund	payListInfo	String	否	是否允许退费，1表示允许退费，0表示不允许，默认值为0*/
+       --/**prescriptionIds	payListInfo	String	否	处方号,允许线上退费时必须*/
+       --/**refundType	payListInfo	String	否	退费方式，线上退费填"online"*/
+       --/**refundNo	payListInfo	String	否	退费流水号，refundStatus=1或者2时必须*/
+       --/**refundStatus	payListInfo	orderInfo	否	退费状态 0已支付1退费中 2 已退费*/
+       --/**refundFee	payListInfo	String	否	退费自费金额，单位分*/
+       --/**refundTime	payListInfo	String	否	退费时间yyyy-MM-dd HH:mm:ss*/
+       --/**hasExpress	payListInfo	String	否	是否有药品快递信息 1包含 0不包含*/
+       --/**deliveryStatus	payListInfo	String	否	药品物流状态 0 或空，不支持配送 1 可配送 2 已配送*/
+       --/**medicineCode	payListInfo	String	否	取药码*/
+       --/**pickUpLocation	payListInfo	String	否	取药药房*/
+    </select>
 
 </mapper>

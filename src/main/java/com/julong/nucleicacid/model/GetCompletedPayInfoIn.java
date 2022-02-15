@@ -13,20 +13,17 @@ import javax.xml.bind.annotation.XmlRootElement;
 @Data
 @XmlAccessorType(XmlAccessType.FIELD)
 @XmlRootElement(name = "req")
-public class GetPayInfoIn {
+public class GetCompletedPayInfoIn {
+
     /**hospitalId	req	String	否	医院代码*/
     private String hospitalId;
-    /**healthCardNo	req	String	是	患者健康卡号码*/
+    /**healthCardNo	req	String	是	用户健康卡号码*/
     private String healthCardNo;
     /**patientId	req	String	是	患者唯一ID*/
     private String patientId;
-    /**startDate	req	String	否	查询开始日期，格式：YYYY-MM-DD*/
+    /**startDate	req	String	是	查询开始日期，格式：YYYY-MM-DD*/
     private String startDate;
-    /**endDate	req	String	否	查询结束日期 格式：YYYY-MM-DD*/
+    /**endDate	req	String	是	查询结束日期 格式：YYYY-MM-DD*/
     private String endDate;
-    /**payChannel	req	String	否	支付渠道（上海医保必传）*/
-    private String payChannel;
-
-
 
 }
