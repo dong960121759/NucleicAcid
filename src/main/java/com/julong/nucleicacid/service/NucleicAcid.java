@@ -42,4 +42,11 @@ public interface NucleicAcid {
      * @return
      */
     AddOrderOut nucleicAddOrder(AddOrderIn addOrderIn);
+
+
+    /**
+     * 2.2.3.1 待缴费记录查询
+     * 接口代码	outpatient.getPayInfo
+     * 说明	通过调用该接口获取患者的待缴费就诊记录
+     */
 }

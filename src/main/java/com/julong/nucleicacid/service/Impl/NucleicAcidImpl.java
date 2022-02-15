@@ -54,8 +54,9 @@ public class NucleicAcidImpl implements NucleicAcid {
     private final OrderGroupMapper orderGroupMapper;
     private final OrderItemMapper orderItemMapper;
     private final ClRecentryMapper clRecentryMapper;
+    private final KingDeeNucleicLogMapper kingDeeNucleicLogMapper;
 
-    public NucleicAcidImpl(NucleicAcidMapper nucleicAcidMapper, PatientinfoFOMapper patientinfoFOMapper, PatientCardFOMapper patientCardFOMapper, GeneratorNoMapper generatorNoMapper, SmOidGeneratorMapper smOidGeneratorMapper, PaCLRegisterMapper paCLregisterMapper, PcClrecipeMapper pcClrecipeMapper, OrderGroupMapper orderGroupMapper, OrderItemMapper orderItemMapper, ClRecentryMapper clRecentryMapper) {
+    public NucleicAcidImpl(NucleicAcidMapper nucleicAcidMapper, PatientinfoFOMapper patientinfoFOMapper, PatientCardFOMapper patientCardFOMapper, GeneratorNoMapper generatorNoMapper, SmOidGeneratorMapper smOidGeneratorMapper, PaCLRegisterMapper paCLregisterMapper, PcClrecipeMapper pcClrecipeMapper, OrderGroupMapper orderGroupMapper, OrderItemMapper orderItemMapper, ClRecentryMapper clRecentryMapper, KingDeeNucleicLogMapper kingDeeNucleicLogMapper) {
         this.nucleicAcidMapper = nucleicAcidMapper;
         this.patientinfoFOMapper = patientinfoFOMapper;
         this.patientCardFOMapper = patientCardFOMapper;
@@ -66,6 +67,7 @@ public class NucleicAcidImpl implements NucleicAcid {
         this.orderGroupMapper = orderGroupMapper;
         this.orderItemMapper = orderItemMapper;
         this.clRecentryMapper = clRecentryMapper;
+        this.kingDeeNucleicLogMapper = kingDeeNucleicLogMapper;
     }
     /**
      * 获得出生日期
@@ -499,7 +501,11 @@ public class NucleicAcidImpl implements NucleicAcid {
         kingDeeNucleicLogFO.setPatientId(String.valueOf(patientinfoFO.getPatientid()));
         kingDeeNucleicLogFO.setPhone(patientinfoFO.getMobile());
         kingDeeNucleicLogFO.setItemId(String.valueOf(_defaultHsjcGroupID));
-        return null;
+        kingDeeNucleicLogMapper.insert(kingDeeNucleicLogFO);
+
+        addOrderOut.setResultCode(KingDeeCodeInfo.SUCCESS);
+
+        return addOrderOut ;
     }
 
 }

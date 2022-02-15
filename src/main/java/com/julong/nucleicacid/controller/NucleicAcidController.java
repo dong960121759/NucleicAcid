@@ -45,6 +45,25 @@ public class NucleicAcidController {
             case "addOrder":
                 //1.4核酸检测预约下单
                 return XmlUtil.pojoToXml((nucleicAcidImpl.nucleicAddOrder((AddOrderIn) XmlUtil.xmlToPojo(AddOrderIn.class,inXml))));
+            case "getPayInfo":
+                //2.2.3.1待缴费记录查询
+                return XmlUtil.pojoToXml((nucleicAcidImpl.getPayInfo((AddOrderIn) XmlUtil.xmlToPojo(AddOrderIn.class,inXml))));
+            case "getPaybillfee":
+            //2.2.3.2获取待缴费用信息
+                return XmlUtil.pojoToXml((nucleicAcidImpl.getPaybillfee((AddOrderIn) XmlUtil.xmlToPojo(AddOrderIn.class,inXml))));
+
+            case "pay":
+            //2.2.3.3待缴费记录支付
+                return XmlUtil.pojoToXml((nucleicAcidImpl.pay((AddOrderIn) XmlUtil.xmlToPojo(AddOrderIn.class,inXml))));
+
+            case "getCompletedPayInfo":
+            //2.2.3.4已缴费记录查询
+                return XmlUtil.pojoToXml((nucleicAcidImpl.getCompletedPayInfo((AddOrderIn) XmlUtil.xmlToPojo(AddOrderIn.class,inXml))));
+
+            case "getCompletedPayDetailInfo":
+            //2.2.3.5 已缴费记录明细查询
+                return XmlUtil.pojoToXml((nucleicAcidImpl.getCompletedPayDetailInfo((AddOrderIn) XmlUtil.xmlToPojo(AddOrderIn.class,inXml))));
+
         }
         return null;
     }

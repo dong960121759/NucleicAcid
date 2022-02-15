@@ -16,10 +16,6 @@ public class AddOrderOut {
     /**resultDesc	res	String	是	处理结果描述*/
     private String resultDesc;
     /**patientId	res	String	是	患者ID，当resultCode为0时必须返回*/
-    private String patientId;
-    /**healthCardNo	res	String	是	健康卡号码，当resultCode为0时必须返回*/
-    private String healthCardNo;
-    /**oppatNo	res	String	否	患者病历号*/
-    private String oppatNo;
+    private String remark;
 
 }
