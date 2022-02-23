@@ -1,5 +1,6 @@
 package com.julong.nucleicacid.dao;
 
+import com.julong.nucleicacid.entity.UnChrgRecipeFO;
 import com.julong.nucleicacid.model.*;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
@@ -60,4 +61,14 @@ public interface NucleicAcidMapper {
      */
      BigDecimal getGroupAmount(@Param("groupId")Long groupId) ;
      Long getOrderItemPretype(@Param("itemId")Long itemId) ;
+
+     List<UnChrgRecipeFO> getUnChrgRecipeFO(@Param("cardNo")String cardNo, @Param("limitDay")Long limitDay, @Param("beginDate")String beginDate, @Param("endDate")String endDate);
+
+
+    /**
+     * 2.2.3.1 待缴费记录查询
+     * 接口代码	outpatient.getPayInfo
+     * 说明	通过调用该接口获取患者的待缴费就诊记录
+     */
+    List<GetPayInfoOutSet> getPayInfo(@Param("cardNo")String cardNo, @Param("limitDay")Long limitDay, @Param("beginDate")String beginDate, @Param("endDate")String endDate);
 }

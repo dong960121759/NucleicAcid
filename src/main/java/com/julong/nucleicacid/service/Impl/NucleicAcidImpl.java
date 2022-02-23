@@ -44,7 +44,7 @@ public class NucleicAcidImpl implements NucleicAcid {
     private Long  _defaultHsjcGroupID;
     @Value("${_defaultRecipeLimitDays}")
     private Long _defaultRecipeLimitDays ;//处方有效期
-
+    private final SimpleDateFormat _formatDate_his = new SimpleDateFormat("yyyy.MM.dd");
 
     private final NucleicAcidMapper nucleicAcidMapper;
     private final PatientinfoFOMapper patientinfoFOMapper;
@@ -560,6 +560,39 @@ public class NucleicAcidImpl implements NucleicAcid {
             limitDay = 3L;
         }
 
+        if(beginDate == null || "".equals(beginDate.trim()) ) {
+            Calendar cal = Calendar.getInstance();// 取当前日期。
+            cal.add(Calendar.DATE, -1 * limitDay.intValue() ) ;	//当前日期加n天
+            beginDate = _formatDate_his.format(cal.getTime())  ;
+        }
+
+        if(endDate == null || "".equals(endDate.trim()) ) {
+            Calendar cal = Calendar.getInstance();// 取当前日期。
+            endDate = _formatDate_his.format(cal.getTime())  ;
+        }
+
+        //获得全部未结算处方ID列表
+        List<UnChrgRecipeFO> unChrgRecipeFOS = nucleicAcidMapper.getUnChrgRecipeFO(cardNo , limitDay , beginDate , endDate);
+        List<Long> recipeIds = new ArrayList<>();
+        boolean hasother = false;
+        boolean has114 = false;
+        for (UnChrgRecipeFO unChrgRecipeFO : unChrgRecipeFOS){
+            recipeIds.add(unChrgRecipeFO.getRecipeid());
+            if (JlV60DictInfo.NEW_CL_DEPT_114.equals(unChrgRecipeFO.getDeptid().toString())) {
+                has114 = true;
+            } else {
+                hasother = true;
+            }
+        }
+        // 地点校验，否，不生成PAYNO 该结算既有114新市门诊 又有总院
+        if(has114 == hasother){
+            getPayInfoOut.setResultCode(KingDeeCodeInfo.FAILED);
+            getPayInfoOut.setResultDesc("该结算既有114新市门诊处方 又有总院的！");
+            return getPayInfoOut;
+        }
+
+
+
         return null;
     }
 
@@ -568,7 +601,6 @@ public class NucleicAcidImpl implements NucleicAcid {
      * 接口代码	outpatient.getPaybillfee
      * 说明	可以通过调用本接口获取某次就诊中指定处方的待缴费费用信息
      *
-     * @param getPaybillfeeIn
      */
     @Override
     public GetPaybillfeeOut getPaybillfee(GetPaybillfeeIn getPaybillfeeIn) {

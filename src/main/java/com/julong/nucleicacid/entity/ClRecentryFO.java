@@ -10,7 +10,7 @@ import java.math.BigDecimal;
 import java.util.Calendar;
 import java.util.Date;
 
-;
+
 
 @Data
 @TableName("PC_CL_DATA_RECIPEENTRY")

@@ -19,6 +19,10 @@ public interface JlV60DictInfo {
 		 */
 		public static final Long SEX_2 = 2L;
 
+	/**
+	 * 新市门诊科室
+	 */
+		public  static final String NEW_CL_DEPT_114 = "114";
 }
 
 

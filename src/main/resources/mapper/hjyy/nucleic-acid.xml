@@ -105,5 +105,63 @@
        --/**medicineCode	payListInfo	String	否	取药码*/
        --/**pickUpLocation	payListInfo	String	否	取药药房*/
     </select>
+    <select id="getUnChrgRecipeFO" resultType="com.julong.nucleicacid.entity.UnChrgRecipeFO">
+        select
+            to_char( cf.RECIPEID ) as RECIPEID,
+            to_char( cf.PATIENTID ) as PATIENTID,
+            nvl( to_char(cf.deptid),'-1') as deptid
+        from pc_cl_data_recipe cf , pa_data_patient br
+        where cf.PATIENTID = br.PATIENTID
+        and br.HCNO = :cardNo
+        and not exists ( select cf1.recipeid  from pc_cl_data_recipe cf1 where cf1.ENCOUNTERID = cf.ENCOUNTERID
+          and nvl(cf1.SOCIALTYPE,'9') &lt;> '9'   and cf1.isdelete = '0' and cf1.ischarge = '0'
+        )   --处方中的自费
+        and br.ISDELETE = '0'  and cf.ISDELETE = '0' and cf.isCharge = '0'
+       and to_char(cf.INPUTTIME,'yyyy-mm-dd') > to_char(sysdate - :limitDay , 'yyyy-mm-dd')
+        and to_char(cf.INPUTTIME,'yyyy-mm-dd') between :beginDate and  :endDate
+    order by cf.PATIENTID,cf.ENCOUNTERID,cf.RECIPEID
+
+    </select>
+    <select id="getPayInfo" resultType="com.julong.nucleicacid.model.GetPayInfoOutSet">
+    select
+    --clinicSeq	payListInfo	String	是	就诊流水号
+    to_char(cf.ENCOUNTERID) AS clinicSeq,
+    --clinicTime	payListInfo	String	是	就诊日期
+    to_char(cf.INPUTTIME,'yyyy-MM-dd') AS clinicTime,
+    --hospitalId	payListInfo	String	是	医院代码
+    '-' AS hospitalId,
+    --deptId	payListInfo	String	是	接诊科室代码
+    to_char(cf.DEPTID) AS deptId,
+    --deptName	payListInfo	String	是	接诊科室名称
+    (select DEPTNAME from OM_DEPARTMENT where DEPTID=cf.DEPTID ) AS deptName,
+    --doctorId	payListInfo	String	是	接诊医生代码
+    to_char(cf.DOCID) AS doctorId,
+    --doctorName	payListInfo	String	是	接诊医生姓名
+    (select USERNAME from SM_USER where USERID= cf.DOCID) AS doctorName,
+    --payAmout	payListInfo	String	是	未缴费总金额，单位：分
+    (select to_char( sum(  nvl( decode( pce.ISCHARGE , '1' ,  pce.AMOUNT,0 ),0)))  from PC_CL_DATA_RECIPEENTRY pce where pce.RECIPEID = cf.RECIPEID) AS payAmout,
+    --settleCode	payListInfo	String	是	结算类型代码，自费00
+    '00' AS settleCode,
+    --必填参数，，否则页面会显示null
+    --settleType	payListInfo	String	否	结算类型名称,自费时可空
+    '' AS settleType,
+    --outpatientType	payListInfo	String	否	诊间支付类型：	（空字符串或0：普通线上诊间支付模式；1：充值模式）
+    '' AS outpatientType,
+    --prescriptionIds	payListInfo	String	否	处方号
+    to_char( cf.RECIPEID ) AS prescriptionIds,
+    --isFirstPay	payListInfo	String	否	是否优先支付 1是0 否
+    '' AS isFirstPay
+    --
+    from pc_cl_data_recipe cf , pa_data_patient br
+    where cf.PATIENTID = br.PATIENTID
+      and not exists ( select cf1.recipeid  from pc_cl_data_recipe cf1 where cf1.ENCOUNTERID = cf.ENCOUNTERID
+                                                                         and nvl(cf1.SOCIALTYPE,'9') != '9'   and cf1.isdelete = '0' and cf1.ischarge = '0'
+        )   --处方中的自费
+      and br.ISDELETE = '0'  and cf.ISDELETE = '0' and cf.isCharge = '0'
+      and to_char(cf.INPUTTIME,'yyyy-mm-dd') > to_char(sysdate - :limitDay , 'yyyy-mm-dd')
+      and to_char(cf.INPUTTIME,'yyyy-mm-dd') between :beginDate and  :endDate
+      and br.HCNO = :cardNo
+    order by cf.PATIENTID,cf.ENCOUNTERID,cf.RECIPEID
+    </select>
 
 </mapper>
