@@ -572,13 +572,12 @@ public class NucleicAcidImpl implements NucleicAcid {
         }
 
         //获得全部未结算处方ID列表
-        List<UnChrgRecipeFO> unChrgRecipeFOS = nucleicAcidMapper.getUnChrgRecipeFO(cardNo , limitDay , beginDate , endDate);
-        List<Long> recipeIds = new ArrayList<>();
+        List<GetPayInfoOutSet> getPayInfoOutSets = nucleicAcidMapper.getPayInfo(cardNo , limitDay , beginDate , endDate);
         boolean hasother = false;
         boolean has114 = false;
-        for (UnChrgRecipeFO unChrgRecipeFO : unChrgRecipeFOS){
-            recipeIds.add(unChrgRecipeFO.getRecipeid());
-            if (JlV60DictInfo.NEW_CL_DEPT_114.equals(unChrgRecipeFO.getDeptid().toString())) {
+        for (GetPayInfoOutSet getPayInfoOutSet : getPayInfoOutSets){
+
+            if (JlV60DictInfo.NEW_CL_DEPT_114.equals(getPayInfoOutSet.getDeptId())) {
                 has114 = true;
             } else {
                 hasother = true;
@@ -590,10 +589,10 @@ public class NucleicAcidImpl implements NucleicAcid {
             getPayInfoOut.setResultDesc("该结算既有114新市门诊处方 又有总院的！");
             return getPayInfoOut;
         }
+        getPayInfoOut.setResultCode(KingDeeCodeInfo.SUCCESS);
+        getPayInfoOut.setSet(getPayInfoOutSets);
 
-
-
-        return null;
+        return getPayInfoOut;
     }
 
     /**
