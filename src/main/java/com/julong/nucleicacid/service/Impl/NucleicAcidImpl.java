@@ -515,7 +515,6 @@ public class NucleicAcidImpl implements NucleicAcid {
      * 接口代码	outpatient.getPayInfo
      * 说明	通过调用该接口获取患者的待缴费就诊记录
      *
-     * @param getPayInfoIn
      */
     @Override
     public ResultOut<GetPayInfoOutSet> getPayInfo(GetPayInfoIn getPayInfoIn) {
@@ -525,7 +524,7 @@ public class NucleicAcidImpl implements NucleicAcid {
         String endDate = getPayInfoIn.getEndDate()  ;
         //1.判断卡是否有效
         if(cardNo != null && !"".equals(cardNo.trim()) ){			//如果有卡号
-            List<PatientinfoFO> patList = null ;
+            List<PatientinfoFO> patList;
             try {
                 QueryWrapper<PatientinfoFO> queryWrapper = new QueryWrapper<>();
                 queryWrapper.eq("hcno", cardNo);
@@ -603,7 +602,85 @@ public class NucleicAcidImpl implements NucleicAcid {
      */
     @Override
     public GetPaybillfeeOut getPaybillfee(GetPaybillfeeIn getPaybillfeeIn) {
-        return null;
+
+        GetPaybillfeeOut getPaybillfeeOut = new GetPaybillfeeOut();
+
+        List<Long> recIds = new ArrayList<>();
+        String cardNo = getPaybillfeeIn.getHealthCardNo();
+        String recList = getPaybillfeeIn.getPrescriptionIds();
+        //1.判断卡是否有效
+        if(cardNo != null && !"".equals(cardNo.trim()) ){			//如果有卡号
+            List<PatientinfoFO> patList;
+            try {
+                QueryWrapper<PatientinfoFO> queryWrapper = new QueryWrapper<>();
+                queryWrapper.eq("hcno", cardNo);
+                queryWrapper.eq("isdelete", "0");
+                patList =  patientinfoFOMapper.selectList(queryWrapper);
+
+                if(patList == null || patList.size() <= 0){
+                    getPaybillfeeOut.setResultCode(KingDeeCodeInfo.FAILED);
+                    getPaybillfeeOut.setResultDesc(cardNo+ "找不到该卡号对应的病人信息！") ;
+                    return getPaybillfeeOut ;
+                }else if( patList.size() > 1){
+                    getPaybillfeeOut.setResultCode(KingDeeCodeInfo.FAILED);
+                    getPaybillfeeOut.setResultDesc(cardNo+ "该卡号对应多个病人信息！") ;
+                    return getPaybillfeeOut ;
+                }
+
+            } catch (Exception e) {
+                e.printStackTrace();
+                getPaybillfeeOut.setResultCode(KingDeeCodeInfo.FAILED);
+                getPaybillfeeOut.setResultDesc(cardNo+ "出错！") ;
+                return getPaybillfeeOut ;
+            }
+        }else {
+            getPaybillfeeOut.setResultCode(KingDeeCodeInfo.FAILED);
+            getPaybillfeeOut.setResultDesc("卡号不能为空！") ;
+            return getPaybillfeeOut ;
+        }
+        if (recList == null){
+            //获得全部未结算处方ID列表
+
+            List<GetPayInfoOutSet> getPayInfoOutSets = nucleicAcidMapper.getPayInfo(cardNo , _defaultRecipeLimitDays , null , null);
+
+            StringBuilder sb = new StringBuilder();
+            for (GetPayInfoOutSet getPayInfoOutSet: getPayInfoOutSets){
+                sb.append(getPayInfoOutSet.getPrescriptionIds()).append(",");
+
+                recIds.add(Long.valueOf(getPayInfoOutSet.getPrescriptionIds()));
+            }
+            recList = sb.deleteCharAt(sb.length()-1).toString();
+        }else{
+            String[] strRecs = recList.split(",");
+            for (String strRec : strRecs){
+                recIds.add(Long.valueOf(strRec));
+            }
+        }
+
+        List<UnChrgRecipeBillFO> unChrgRecipeBillFOS = nucleicAcidMapper.getRecipsbyRecIds(recIds);
+        List<GetPaybillfeeOutSet> getPaybillfeeOutSets = new ArrayList<>();
+        BigDecimal amout = new BigDecimal("0");
+        for (UnChrgRecipeBillFO unChrgRecipeBillFO: unChrgRecipeBillFOS) {
+            //his的mobilepay_hispayno表处理
+
+
+
+
+            for (GetPaybillfeeOutSet getPaybillfeeOutSet: unChrgRecipeBillFO.getGetPaybillfeeOutSets()){
+                BigDecimal typeAmout = new BigDecimal(getPaybillfeeOutSet.getTypeAmout());
+                typeAmout=  typeAmout.multiply(new BigDecimal(100));
+                amout = amout.add(typeAmout);
+            }
+
+            getPaybillfeeOutSets.addAll(unChrgRecipeBillFO.getGetPaybillfeeOutSets());
+        }
+        getPaybillfeeOut.setPayAmout(amout.toString());
+        getPaybillfeeOut.setRecPayAmout("0");
+        getPaybillfeeOut.setTotalPayAmout(amout.toString());
+        getPaybillfeeOut.setPrescriptionIds(recList);
+        getPaybillfeeOut.setFeeInfo(getPaybillfeeOutSets);
+        getPaybillfeeOut.setResultCode(KingDeeCodeInfo.SUCCESS);
+        return getPaybillfeeOut;
     }
 
     /**

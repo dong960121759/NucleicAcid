@@ -159,9 +159,61 @@
         )   --处方中的自费
       and br.ISDELETE = '0'  and cf.ISDELETE = '0' and cf.isCharge = '0'
       and to_char(cf.INPUTTIME,'yyyy-mm-dd') > to_char(sysdate - :limitDay , 'yyyy-mm-dd')
-      and to_char(cf.INPUTTIME,'yyyy-mm-dd') between :beginDate and  :endDate
-      and br.HCNO = :cardNo
+      <if test=" beginDate!=null and beginDate !=''">
+      and to_char(cf.INPUTTIME,'yyyy-mm-dd') > #{beginDate} and  :endDate
+      </if>
+        <if test=" beginDate!=null and beginDate !=''">
+      and to_char(cf.INPUTTIME,'yyyy-mm-dd') &lt;  #{endDate}
+      </if>
+      and br.HCNO = #{cardNo}
     order by cf.PATIENTID,cf.ENCOUNTERID,cf.RECIPEID
+    </select>
+    <select id="getPaybillfee" resultType="com.julong.nucleicacid.model.GetPaybillfeeOut">
+        select
+        --payAmout	res	String	是	自费金额(单位：分)
+        --recPayAmout	res	String	是	统筹金额(单位：分)
+        --totalPayAmout	res	String	是	总金额(单位：分)
+        --prescriptionIds	res	String	是	处方号，多个处方号用半角逗号分隔
+        --remark	res	String	否	备注信息
+        --medicareSettleLogId	res	String	否	医保预结算参数若使用线上医保结算，参数格式必须json格式：{“serial_no”:”业务流水号”,“bill_no”:”业务单据号”}
+        --insuranType	res	String	否	参保类型代码，KID02代表少儿医保结算
+        --prescriptionContent	res	String	否	处方单详细内容，具体格式以当地人社局系统要求为准线上医保结算时，必须传入。包含<![CDATA[]]>标签。当该透传体不为空时，平台会调用medicare.getOnlineMedicareSettle接口，重新构造透传体
+        --isDecoction	res	String	否	是否代煎，1表示需要 0或者空不需要
+        --isDelivery	res	String	否	是否需要配送 1表示需要 0或者空不需要
+        --isInformedConsent	res	String	否	是否有知情同意书需要确认 1表示需要 0或者空不需要
+        --isMedicinalDetail	res	String	否	是否查看药品明细 （1有，0 无）
+        --citizenCardAmount 	res	String	否	市民卡金额(单位：分)
+        --citizenCardAmountName	res	String	否	市民卡金额显示名称,可自定义为其他名称
+        --hospitalCardAmount	res	String	否	院内卡金额(单位：分)
+        --hospitalCardAmountName	res	String	否	院内卡金额显示名称,可自定义为其他名称
+
+
+    </select>
+    <resultMap id="getRecipsbyRecIdsMap" type="com.julong.nucleicacid.entity.UnChrgRecipeBillFO">
+        <id column="encounterid" property="encounterid"/>
+        <collection column="recipeid" property="recipeids" />
+        <collection property="getPaybillfeeOutSets" ofType="com.julong.nucleicacid.model.GetPaybillfeeOutSet">
+            <result column="typeCode" property="typeCode"/>
+            <result column="typeName" property="typeName"/>
+            <result column="tyeAmout" property="typeAmout"/>
+        </collection>
+    </resultMap>
+    <select id="getRecipsbyRecIds" resultMap="getRecipsbyRecIdsMap" resultType="com.julong.nucleicacid.entity.UnChrgRecipeBillFO">
+    select
+        a.encounterid AS encounterid,
+        a.RECIPEID AS recipeid,
+        b.ITEMID AS typeCode,
+        (select ITEMNAME from AB_ORDERITEM where ITEMID = b.ITEMID) AS typeName,
+        to_char(nvl( decode( b.ISCHARGE , '1' ,  b.AMOUNT,0 ),0))   AS typeAmout
+
+    from PC_CL_DATA_RECIPE a , PC_CL_DATA_RECIPEENTRY b
+    where a.recipeid = b.recipeid and a.RECIPEID in
+        <foreach  collection="list" item="recIds" index="index"
+                               open="(" close=")" separator=",">
+        #{recIds}
+        </foreach>
+
+
     </select>
 
 </mapper>

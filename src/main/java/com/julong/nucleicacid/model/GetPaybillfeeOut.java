@@ -52,6 +52,6 @@ public class GetPaybillfeeOut {
     /**hospitalCardAmountName	res	String	否	院内卡金额显示名称,可自定义为其他名称*/
     private String hospitalCardAmountName;
     /**feeInfo	res	List<feeInfo>	否	费用分类信息*/
-    private List<GetPayInfoOutSet> feeInfo;
+    private List<GetPaybillfeeOutSet> feeInfo;
 
 }

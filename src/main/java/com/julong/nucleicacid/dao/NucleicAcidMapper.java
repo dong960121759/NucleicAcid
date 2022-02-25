@@ -1,5 +1,6 @@
 package com.julong.nucleicacid.dao;
 
+import com.julong.nucleicacid.entity.UnChrgRecipeBillFO;
 import com.julong.nucleicacid.entity.UnChrgRecipeFO;
 import com.julong.nucleicacid.model.*;
 import org.apache.ibatis.annotations.Mapper;
@@ -71,4 +72,20 @@ public interface NucleicAcidMapper {
      * 说明	通过调用该接口获取患者的待缴费就诊记录
      */
     List<GetPayInfoOutSet> getPayInfo(@Param("cardNo")String cardNo, @Param("limitDay")Long limitDay, @Param("beginDate")String beginDate, @Param("endDate")String endDate);
+
+
+    /**
+     * 2.2.3.2 获取待缴费用信息
+     * 接口代码	outpatient.getPaybillfee
+     * 说明	可以通过调用本接口获取某次就诊中指定处方的待缴费费用信息
+     */
+
+    GetPaybillfeeOut getPaybillfee(List<Long> recNos);
+
+    /**
+     * 获取处方信息
+     * @param recIds
+     * @return
+     */
+    List<UnChrgRecipeBillFO> getRecipsbyRecIds(List<Long> recIds);
 }
