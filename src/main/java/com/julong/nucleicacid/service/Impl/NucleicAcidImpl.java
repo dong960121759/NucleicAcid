@@ -9,10 +9,16 @@ import com.julong.nucleicacid.utils.AgeUtil;
 import com.julong.nucleicacid.utils.JlV60DictInfo;
 import com.julong.nucleicacid.utils.KingDeeCodeInfo;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.codec.digest.DigestUtils;
 import org.mybatis.spring.annotation.MapperScan;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.TransactionDefinition;
+import org.springframework.transaction.TransactionStatus;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.interceptor.TransactionAspectSupport;
 
 import java.math.BigDecimal;
 import java.text.DateFormat;
@@ -46,6 +52,12 @@ public class NucleicAcidImpl implements NucleicAcid {
     private Long _defaultRecipeLimitDays ;//处方有效期
     private final SimpleDateFormat _formatDate_his = new SimpleDateFormat("yyyy.MM.dd");
 
+    @Autowired
+    DataSourceTransactionManager dataSourceTransactionManager;
+    @Autowired
+    TransactionDefinition transactionDefinition;
+
+
     private final NucleicAcidMapper nucleicAcidMapper;
     private final PatientinfoFOMapper patientinfoFOMapper;
     private final PatientCardFOMapper patientCardFOMapper;
@@ -57,8 +69,8 @@ public class NucleicAcidImpl implements NucleicAcid {
     private final OrderItemMapper orderItemMapper;
     private final ClRecentryMapper clRecentryMapper;
     private final KingDeeNucleicLogMapper kingDeeNucleicLogMapper;
-
-    public NucleicAcidImpl(NucleicAcidMapper nucleicAcidMapper, PatientinfoFOMapper patientinfoFOMapper, PatientCardFOMapper patientCardFOMapper, GeneratorNoMapper generatorNoMapper, SmOidGeneratorMapper smOidGeneratorMapper, PaCLRegisterMapper paCLregisterMapper, PcClrecipeMapper pcClrecipeMapper, OrderGroupMapper orderGroupMapper, OrderItemMapper orderItemMapper, ClRecentryMapper clRecentryMapper, KingDeeNucleicLogMapper kingDeeNucleicLogMapper) {
+    private final MobilePayHisPayNoFOMapper mobilePayHisPayNoFOMapper;
+    public NucleicAcidImpl(NucleicAcidMapper nucleicAcidMapper, PatientinfoFOMapper patientinfoFOMapper, PatientCardFOMapper patientCardFOMapper, GeneratorNoMapper generatorNoMapper, SmOidGeneratorMapper smOidGeneratorMapper, PaCLRegisterMapper paCLregisterMapper, PcClrecipeMapper pcClrecipeMapper, OrderGroupMapper orderGroupMapper, OrderItemMapper orderItemMapper, ClRecentryMapper clRecentryMapper, KingDeeNucleicLogMapper kingDeeNucleicLogMapper, MobilePayHisPayNoFOMapper mobilePayHisPayNoFOMapper) {
         this.nucleicAcidMapper = nucleicAcidMapper;
         this.patientinfoFOMapper = patientinfoFOMapper;
         this.patientCardFOMapper = patientCardFOMapper;
@@ -70,6 +82,7 @@ public class NucleicAcidImpl implements NucleicAcid {
         this.orderItemMapper = orderItemMapper;
         this.clRecentryMapper = clRecentryMapper;
         this.kingDeeNucleicLogMapper = kingDeeNucleicLogMapper;
+        this.mobilePayHisPayNoFOMapper = mobilePayHisPayNoFOMapper;
     }
     /**
      * 获得出生日期
@@ -109,11 +122,19 @@ public class NucleicAcidImpl implements NucleicAcid {
      * 生成OID
      */
     private Long smOidGenerate(String  fid) {
-        SmOidGeneratorFO smOidGeneratorFO = smOidGeneratorMapper.selectById(fid);
-        Long fcurrOid =smOidGeneratorFO.getFcurrOid();
-        smOidGeneratorFO.setFcurrOid(fcurrOid+1);
-        smOidGeneratorMapper.updateById(smOidGeneratorFO);
-        smOidGeneratorFO = smOidGeneratorMapper.selectById(fid);
+        TransactionStatus transactionStatus = dataSourceTransactionManager.getTransaction(transactionDefinition);
+        SmOidGeneratorFO smOidGeneratorFO= new SmOidGeneratorFO();
+        try {
+            smOidGeneratorFO = smOidGeneratorMapper.selectById(fid);
+            Long fcurrOid =smOidGeneratorFO.getFcurrOid();
+            smOidGeneratorFO.setFcurrOid(fcurrOid+1);
+            smOidGeneratorMapper.updateById(smOidGeneratorFO);
+            smOidGeneratorFO = smOidGeneratorMapper.selectById(fid);
+
+            dataSourceTransactionManager.commit(transactionStatus);     //手动提交
+        }catch (Exception e) {
+            dataSourceTransactionManager.rollback(transactionStatus);       //事务回滚
+        }
 
         return smOidGeneratorFO.getFcurrOid();
 
@@ -123,15 +144,22 @@ public class NucleicAcidImpl implements NucleicAcid {
      * 
      */
     private String smNoGenerate(Long noType) {
-        QueryWrapper<GeneratorNoFO> queryWrapper=new QueryWrapper<>();
+        TransactionStatus transactionStatus = dataSourceTransactionManager.getTransaction(transactionDefinition);
+        SmOidGeneratorFO smOidGeneratorFO= new SmOidGeneratorFO();
+        try {
+            QueryWrapper<GeneratorNoFO> queryWrapper=new QueryWrapper<>();
 
-        queryWrapper.eq("notype",noType);
+            queryWrapper.eq("notype",noType);
 
-        GeneratorNoFO generatorNoFO = generatorNoMapper.selectOne(queryWrapper);
-        if (generatorNoFO!=null) {
-            Long  currentNo = generatorNoFO.getCurrentNo();
-            generatorNoFO.setCurrentNo(currentNo+1);
-            generatorNoMapper.updateById(generatorNoFO);
+            GeneratorNoFO generatorNoFO = generatorNoMapper.selectOne(queryWrapper);
+            if (generatorNoFO!=null) {
+                Long  currentNo = generatorNoFO.getCurrentNo();
+                generatorNoFO.setCurrentNo(currentNo+1);
+                generatorNoMapper.updateById(generatorNoFO);
+            }
+            dataSourceTransactionManager.commit(transactionStatus);     //手动提交
+        }catch (Exception e) {
+            dataSourceTransactionManager.rollback(transactionStatus);       //事务回滚
         }
         return nucleicAcidMapper.getGeneratorNo(noType);
 
@@ -160,6 +188,7 @@ public class NucleicAcidImpl implements NucleicAcid {
 
     @Override
     public CreateNewPatientOut createNewPatient(CreateNewPatientIn newPatientIn) {
+        log.info("在线建卡");
         CreateNewPatientOut newPatientOut;
 
         if(newPatientIn.getIdCardNo()==null || "".equals(newPatientIn.getIdCardNo())
@@ -261,11 +290,15 @@ public class NucleicAcidImpl implements NucleicAcid {
      *
      */
     @Override
-    public GetItemOut<GetItemOutSet> nucleicGetItem(GetItemIn getItemIn) {
-
-
-        GetItemOut<GetItemOutSet> getItemOut = new GetItemOut<>();
-        List<GetItemOutSet> getItemOutSets = nucleicAcidMapper.nucleicGetItem(Long.valueOf(getItemIn.getItemId()));
+    public GetItemOut nucleicGetItem(GetItemIn getItemIn) {
+       Long hsjcGroupID ;
+        if (getItemIn.getItemId()==null ||"".equals(getItemIn.getItemId())) {
+            hsjcGroupID =_defaultHsjcGroupID;
+        }else {
+            hsjcGroupID = Long.valueOf(getItemIn.getItemId());
+        }
+        GetItemOut getItemOut = new GetItemOut();
+        List<GetItemOutSet> getItemOutSets = nucleicAcidMapper.nucleicGetItem(hsjcGroupID);
         if (getItemOutSets!=null) {
             getItemOut.setSet(getItemOutSets);
 
@@ -287,6 +320,7 @@ public class NucleicAcidImpl implements NucleicAcid {
      */
     @Override
     public AddOrderOut nucleicAddOrder(AddOrderIn addOrderIn) {
+        log.info("cstmr. nucleic.addOrder核酸检测预约下单");
         String cardNo=addOrderIn.getHealthCardNo();
         String examineDate;
         AddOrderOut addOrderOut =new AddOrderOut();
@@ -608,9 +642,10 @@ public class NucleicAcidImpl implements NucleicAcid {
         List<Long> recIds = new ArrayList<>();
         String cardNo = getPaybillfeeIn.getHealthCardNo();
         String recList = getPaybillfeeIn.getPrescriptionIds();
+        List<PatientinfoFO> patList ;
         //1.判断卡是否有效
         if(cardNo != null && !"".equals(cardNo.trim()) ){			//如果有卡号
-            List<PatientinfoFO> patList;
+
             try {
                 QueryWrapper<PatientinfoFO> queryWrapper = new QueryWrapper<>();
                 queryWrapper.eq("hcno", cardNo);
@@ -662,8 +697,12 @@ public class NucleicAcidImpl implements NucleicAcid {
         BigDecimal amout = new BigDecimal("0");
         for (UnChrgRecipeBillFO unChrgRecipeBillFO: unChrgRecipeBillFOS) {
             //his的mobilepay_hispayno表处理
-
-
+            StringBuilder sb = new StringBuilder();
+            recList = sb.deleteCharAt(sb.length()-1).toString();
+            for (String recId: unChrgRecipeBillFO.getRecipeids()){
+                sb.append(recId).append(",");
+            }
+            String eachRecipesOne = sb.deleteCharAt(sb.length()-1).toString();
 
 
             for (GetPaybillfeeOutSet getPaybillfeeOutSet: unChrgRecipeBillFO.getGetPaybillfeeOutSets()){
@@ -692,7 +731,176 @@ public class NucleicAcidImpl implements NucleicAcid {
      */
     @Override
     public PayOut pay(PayIn payIn) {
-        return null;
+        PayOut payOut = new PayOut();
+        payOut.setResultCode(KingDeeCodeInfo.FAILED);
+
+        List<Long> recIds = new ArrayList<>();
+        String cardNo = payIn.getHealthCardNo();
+        String recList = payIn.getPrescriptionIds();
+        List<PatientinfoFO> patList ;
+
+        //1.判断卡是否有效
+        if(cardNo != null && !"".equals(cardNo.trim()) ){			//如果有卡号
+
+            try {
+                QueryWrapper<PatientinfoFO> queryWrapper = new QueryWrapper<>();
+                queryWrapper.eq("hcno", cardNo);
+                queryWrapper.eq("isdelete", "0");
+                patList =  patientinfoFOMapper.selectList(queryWrapper);
+
+                if(patList == null || patList.size() <= 0){
+                    payOut.setResultCode(KingDeeCodeInfo.FAILED);
+                    payOut.setResultDesc(cardNo+ "找不到该卡号对应的病人信息！") ;
+                    return payOut ;
+                }else if( patList.size() > 1){
+                    payOut.setResultCode(KingDeeCodeInfo.FAILED);
+                    payOut.setResultDesc(cardNo+ "该卡号对应多个病人信息！") ;
+                    return payOut ;
+                }
+
+            } catch (Exception e) {
+                e.printStackTrace();
+                payOut.setResultCode(KingDeeCodeInfo.FAILED);
+                payOut.setResultDesc(cardNo+ "出错！") ;
+                return payOut ;
+            }
+        }else {
+            payOut.setResultCode(KingDeeCodeInfo.FAILED);
+            payOut.setResultDesc("卡号不能为空！") ;
+            return payOut ;
+        }
+        if (recList == null){
+            payOut.setResultCode(KingDeeCodeInfo.FAILED);
+            payOut.setResultDesc("处方号不能为空！");
+            return payOut ;
+        }else{
+            String[] strRecs = recList.split(",");
+            for (String strRec : strRecs){
+                recIds.add(Long.valueOf(strRec));
+            }
+        }
+
+        String orderId = payIn.getOrderId() ;
+        String tradeNo = payIn.getTradeNo();
+        BigDecimal payAmout = payIn.getPayAmout() ;
+        String payMode = payIn.getPayMode() ;
+        if(orderId == null || "".equals(orderId.trim()) ) {
+            payOut.setResultCode(KingDeeCodeInfo.FAILED);
+            payOut.setResultDesc("支付平台订单号不能为空！");
+            return payOut ;
+        }
+
+        if(tradeNo == null || "".equals(tradeNo.trim()) ) {
+            payOut.setResultCode(KingDeeCodeInfo.FAILED);
+            payOut.setResultDesc("第三方支付交易流水号不能为空！");
+            return payOut ;
+        }
+
+        if(payAmout == null || payAmout.floatValue() < 0.01 ) {
+            payOut.setResultCode(KingDeeCodeInfo.FAILED);
+            payOut.setResultDesc("金额不能为空！");
+            return payOut;
+        }
+            if (payMode == null || "".equals(payMode.trim())) {
+                payOut.setResultCode(KingDeeCodeInfo.FAILED);
+                payOut.setResultDesc("支付方式不能为空！");
+                return payOut;
+            }
+
+//            try{
+//                Map tMap = null ;
+//
+//                tMap = Hjyy_mzCharge(hisPayNo , payMode , amt , null , null , inBody ) ;
+//
+//                if(tMap != null){
+//                    String errorMessage = (String) tMap.get("errorMessage") ;
+//                    if(errorMessage != null){
+//                        payOut.setResultCode(KingDeeCodeInfo.SUCCESS);
+//                        payOut.setResultDesc(errorMessage) ;
+//                    }else{
+//
+//                        List<Long> chrgNoList = (List) tMap.get("chrgNo") ;
+//                        List<String> invoiceNoList = (List) tMap.get("invoiceNo") ;
+//
+//                        String name   = (String)tMap.get("name") ;
+//                        String cardno   = (String)tMap.get("cardno") ;
+//                        String phone   = (String)tMap.get("phone") ;
+//
+//                        //20180628 增加导引信息
+//                        List<String> guideList = (List) tMap.get("guideInfo") ;
+//
+//                        if(chrgNoList != null && chrgNoList.size() > 0 ){
+//
+//                            String chrgNo = "" , invoiceNo = "",guideinfo = "" ;
+//
+//                            if(guideList != null && guideList.size() > 0){
+//                                for(String eachGuide : guideList){
+//                                    if(guideinfo.length() == 0){
+//                                        guideinfo = eachGuide ;
+//                                    }else{
+//                                        guideinfo = guideinfo + "；" + eachGuide ;
+//                                    }
+//                                }
+////								guideinfo = guideinfo +"。[如果需要退费请先到收费处专窗补打发票]。";
+////								guideinfo += "[温馨提示：请在取药、检验、检查时向医务人员出示带有条码的支付详情页面]。";
+//                            }
+//
+//                            for(Long t_chrgNo : chrgNoList){
+//                                if(chrgNo.length() == 0){
+//                                    chrgNo = t_chrgNo.toString() ;
+//                                }else{
+//                                    chrgNo = chrgNo + "," + t_chrgNo.toString() ;
+//                                }
+//                            }
+//
+//                            if(invoiceNoList != null && invoiceNoList.size() > 0){
+//                                for(String t_invoiceNo : invoiceNoList){
+//                                    if(invoiceNo.length() == 0){
+//                                        invoiceNo = t_invoiceNo ;
+//                                    }else{
+//                                        invoiceNo = invoiceNo + "," + t_invoiceNo ;
+//                                    }
+//                                }
+//                            }
+//                            outBody.setName(name);
+//                            outBody.setCardno(cardno);
+//                            outBody.setPhone(phone);
+//                            outBody.setChrgno(chrgNo) ;
+//                            outBody.setInvoiceno(invoiceNo) ;
+//
+//                            String guide = ""; //整合，结算号和各结算的导引
+//                            guide = "序列号：" + chrgNoList.toString(); //结算号列表
+//                            guideinfo += "。[如果需要退费请先到收费处专窗补打发票]。"; //各结算号的导引导累加
+//                            guideinfo += "[温馨提示：请在取药、检验、检查时向医务人员出示带有条码的支付详情页面]。";
+//                            guide = guide + guideinfo ;
+//
+//                            payOut.setGuideinfo( guide  ) ;
+//
+//                            //No assign values
+////							String infoMessage = (String) tMap.get("infoMessage") ;
+////							if(infoMessage != null && !("".equals(infoMessage.trim())) ){
+////								outBody.setGuideinfo("结算号：" + chrgNoList.toString() + "；" + infoMessage) ;
+////							}
+//
+//                            payOut.setResultCode(KingDeeCodeInfo.SUCCESS);
+//                            payOut.setResultDesc( "成功! " ) ;
+//
+//                            returnFO.setBody(outBody) ;
+//                        }
+//                    }
+//                }else {
+//                    payOut.setResultCode(KingDeeCodeInfo.FAILED);
+//                    payOut.setResultDesc( "mzCharge错误! " ) ;
+//                }
+//            } catch (Exception e) {
+//                e.printStackTrace();
+//                TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
+//                payOut.setResultCode(KingDeeCodeInfo.FAILED);
+//                payOut.setResultDesc("门诊结算出错!" + e.getMessage()) ;
+//
+//            }
+
+        return payOut;
     }
 
     /**
@@ -718,5 +926,28 @@ public class NucleicAcidImpl implements NucleicAcid {
     public GetCompletedPayDetailInfoOut getCompletedPayDetailInfo(GetCompletedPayDetailInfoIn getCompletedPayDetailInfoIn) {
         return null;
     }
-
+    private String getHisPayNo(String recNoList){
+            // 判断是否有KEYNO，若无则新生成hispayno 和 加记录
+            String hispaynoKey = DigestUtils.md5Hex(recNoList).toUpperCase(); // MD5（hispayno）
+            String oldKey = null;
+            QueryWrapper<MobilePayHisPayNoFO> queryWrapper = new QueryWrapper<>();
+            queryWrapper.eq("ISCHRG", "0");
+            queryWrapper.eq("RECNO",recNoList);
+            List<MobilePayHisPayNoFO> mobilePayHisPayNoFOS = mobilePayHisPayNoFOMapper.selectList(queryWrapper);
+            if (mobilePayHisPayNoFOS !=null){
+                oldKey = mobilePayHisPayNoFOS.get(0).getHisPayNo();
+            }
+            if (oldKey == null ||"".equals(oldKey)){
+                MobilePayHisPayNoFO hispayFO = new MobilePayHisPayNoFO();
+                hispayFO.setGenDate(Calendar.getInstance().getTime());
+                hispayFO.setHisPayNo(hispaynoKey);
+                hispayFO.setRecNo(recNoList);
+//                hispayFO.setPid(patList.get(0).getPatientid());
+                mobilePayHisPayNoFOMapper.insert(hispayFO);
+            }else {
+                //用原有的Key
+                hispaynoKey = oldKey;
+            }
+            return hispaynoKey;
+    }
 }

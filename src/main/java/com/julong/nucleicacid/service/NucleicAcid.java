@@ -32,7 +32,7 @@ public interface NucleicAcid {
      * @param getItemIn
      * @return
      */
-    GetItemOut<GetItemOutSet> nucleicGetItem(GetItemIn getItemIn);
+    GetItemOut nucleicGetItem(GetItemIn getItemIn);
 
     /**
      * 1.4核酸检测预约下单

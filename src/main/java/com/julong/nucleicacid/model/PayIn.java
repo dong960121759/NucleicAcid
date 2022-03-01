@@ -5,6 +5,7 @@ import lombok.Data;
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlRootElement;
+import java.math.BigDecimal;
 
 /**
  * @className: AddOrderIn
@@ -35,11 +36,11 @@ public class PayIn {
     /**machineId	req	String	否	设备代码（针对自助设备）*/
     private String machineId;
     /**payAmout	req	String	是	自费金额(单位：分)*/
-    private String payAmout;
+    private BigDecimal payAmout;
     /**recPayAmout	req	String	否	统筹金额(单位：分)*/
-    private String recPayAmout;
+    private BigDecimal recPayAmout;
     /**totalPayAmout	req	String	否	总金额(单位：分)*/
-    private String totalPayAmout;
+    private BigDecimal totalPayAmout;
     /**payMode	req	String	是	支付方式：具体编码定义见2.8支付方式*/
     private String payMode;
     /**payTime	req	String	是	交易时间，格式：YYYY-MM-DD HI24:MI:SS*/

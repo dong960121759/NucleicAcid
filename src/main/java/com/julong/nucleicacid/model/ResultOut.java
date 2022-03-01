@@ -14,7 +14,10 @@ import java.util.List;
  */
 @Data
 @XmlRootElement(name = "res")
-@XmlSeeAlso({GetItemOutSet.class})
+@XmlSeeAlso({
+        GetPayInfoOutSet.class,
+        GetCompletedPayInfoOutSet.class
+})
 public class ResultOut<T> {
     /**resultCode	res	String	是	处理结果代码：0-成功*/
     private String resultCode;

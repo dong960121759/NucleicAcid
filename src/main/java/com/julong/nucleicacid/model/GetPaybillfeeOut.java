@@ -12,7 +12,7 @@ import java.util.List;
  */
 @Data
 @XmlRootElement(name = "res")
-@XmlSeeAlso({GetItemOutSet.class})
+
 public class GetPaybillfeeOut {
 
     /**resultCode	res	String	是	处理结果代码：0-成功*/

@@ -12,14 +12,13 @@ import java.util.List;
  */
 @Data
 @XmlRootElement(name = "res")
-@XmlSeeAlso({GetItemOutSet.class})
-public class GetItemOut<T> {
+public class GetItemOut {
 
     /**resultCode	res	String	是	处理结果代码：0-成功 -1 失败*/
     private String resultCode;
     /**resultDesc	res	String	否	处理结果描述*/
     private String resultDesc;
     /**set	res	List	是	套餐的集合*/
-    private List<T> set;
+    private List<GetItemOutSet> set;
 
 }

@@ -104,6 +104,8 @@
        --/**deliveryStatus	payListInfo	String	否	药品物流状态 0 或空，不支持配送 1 可配送 2 已配送*/
        --/**medicineCode	payListInfo	String	否	取药码*/
        --/**pickUpLocation	payListInfo	String	否	取药药房*/
+
+
     </select>
     <select id="getUnChrgRecipeFO" resultType="com.julong.nucleicacid.entity.UnChrgRecipeFO">
         select
