@@ -99,4 +99,20 @@ public interface NucleicAcidMapper {
     List<ClInvoentryFO> mzCalculateClInvoentryFOs(List<Long> oneDrRecsList);
 
     List<LisRequestFO> getLisRequest(List<Long> oneDrRecsList);
+    /**
+     * 用SQL 来判断 是否需要配药 1
+
+     * @return
+     */
+    Long getNeedDispMed1(@Param("recipeId")Long recipeId);
+
+    /**
+     * 用SQL 来判断 是否需要配药 2
+     * @return
+     */
+    Long getNeedDispMed2(@Param("recipeId")Long cfid);
+    /*
+     * 取药口配药优先级
+     * */
+    String getDrugisPriortyPack(@Param("itemid")Long itemid);
 }

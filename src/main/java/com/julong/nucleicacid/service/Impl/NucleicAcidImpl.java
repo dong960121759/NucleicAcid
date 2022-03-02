@@ -6,6 +6,7 @@ import com.julong.nucleicacid.entity.*;
 import com.julong.nucleicacid.model.*;
 import com.julong.nucleicacid.service.NucleicAcid;
 import com.julong.nucleicacid.utils.AgeUtil;
+import com.julong.nucleicacid.utils.DateTimeUtil;
 import com.julong.nucleicacid.utils.JlV60DictInfo;
 import com.julong.nucleicacid.utils.KingDeeCodeInfo;
 import lombok.extern.slf4j.Slf4j;
@@ -53,14 +54,18 @@ public class NucleicAcidImpl implements NucleicAcid {
     private Long _defaultZfbPayID;
     @Value("${_defaultDgNshPayID}")
     private Long _defaultDgNshPayID;
+    @Value("${_defaultChargeWin}")
+    private Long _defaultChargeWin;
     @Value("${_noteJY}")
     private String _noteJY;
     @Value("${_noteJY}")
     private String _noteFS;
     @Value("${_noteJY}")
     private String _noteBC;
-    private final SimpleDateFormat _formatDate_his = new SimpleDateFormat("yyyy.MM.dd");
 
+
+    private final SimpleDateFormat _formatDate_his = new SimpleDateFormat("yyyy-MM-dd");
+    private final SimpleDateFormat _formatDateTime_wx = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
 
     private final NucleicAcidMapper nucleicAcidMapper;
@@ -80,7 +85,23 @@ public class NucleicAcidImpl implements NucleicAcid {
     private final ClPaymentFOMapper clPaymentFOMapper;
     private final ClInvoiceFOMapper clInvoiceFOMapper;
     private final ClInvoentryFOMapper clInvoentryFOMapper;
-    public NucleicAcidImpl(NucleicAcidMapper nucleicAcidMapper, PatientinfoFOMapper patientinfoFOMapper, PatientCardFOMapper patientCardFOMapper, GeneratorNoMapper generatorNoMapper, SmOidGeneratorMapper smOidGeneratorMapper, PaCLRegisterMapper paCLregisterMapper, PcClrecipeMapper pcClrecipeMapper, OrderGroupMapper orderGroupMapper, OrderItemMapper orderItemMapper, ClRecentryMapper clRecentryMapper, KingDeeNucleicLogMapper kingDeeNucleicLogMapper, MobilePayHisPayNoFOMapper mobilePayHisPayNoFOMapper, ClChargeFOMapper clChargeFOMapper, ClChrgentryFOMapper clChrgentryFOMapper, ClPaymentFOMapper clPaymentFOMapper, ClInvoiceFOMapper clInvoiceFOMapper, ClInvoentryFOMapper clInvoentryFOMapper) {
+    private final LisRequestFOMapper lisRequestFOMapper;
+    private final HcMobilePaymentFOMapper hcMobilePaymentFOMapper;
+    private final PhysioTherapyReqFOMapper physioTherapyReqFOMapper;
+    private final AppointmentReqFOMapper appointmentReqFOMapper;
+    private final AppointmentFOMapper appointmentFOMapper;
+    private final WindowFOMapper windowFOMapper;
+    private final WindowLinkFOMapper windowLinkFOMapper;
+
+    public NucleicAcidImpl(NucleicAcidMapper nucleicAcidMapper, PatientinfoFOMapper patientinfoFOMapper,
+                           PatientCardFOMapper patientCardFOMapper, GeneratorNoMapper generatorNoMapper,
+                           SmOidGeneratorMapper smOidGeneratorMapper, PaCLRegisterMapper paCLregisterMapper,
+                           PcClrecipeMapper pcClrecipeMapper, OrderGroupMapper orderGroupMapper,
+                           OrderItemMapper orderItemMapper, ClRecentryMapper clRecentryMapper,
+                           KingDeeNucleicLogMapper kingDeeNucleicLogMapper, MobilePayHisPayNoFOMapper mobilePayHisPayNoFOMapper,
+                           ClChargeFOMapper clChargeFOMapper, ClChrgentryFOMapper clChrgentryFOMapper, ClPaymentFOMapper clPaymentFOMapper,
+                           ClInvoiceFOMapper clInvoiceFOMapper, ClInvoentryFOMapper clInvoentryFOMapper,
+                           LisRequestFOMapper lisRequestFOMapper, HcMobilePaymentFOMapper hcMobilePaymentFOMapper, PhysioTherapyReqFOMapper physioTherapyReqFOMapper, AppointmentReqFOMapper appointmentReqFOMapper, AppointmentFOMapper appointmentFOMapper, WindowFOMapper windowFOMapper, WindowLinkFOMapper windowLinkFOMapper) {
         this.nucleicAcidMapper = nucleicAcidMapper;
         this.patientinfoFOMapper = patientinfoFOMapper;
         this.patientCardFOMapper = patientCardFOMapper;
@@ -98,6 +119,13 @@ public class NucleicAcidImpl implements NucleicAcid {
         this.clPaymentFOMapper = clPaymentFOMapper;
         this.clInvoiceFOMapper = clInvoiceFOMapper;
         this.clInvoentryFOMapper = clInvoentryFOMapper;
+        this.lisRequestFOMapper = lisRequestFOMapper;
+        this.hcMobilePaymentFOMapper = hcMobilePaymentFOMapper;
+        this.physioTherapyReqFOMapper = physioTherapyReqFOMapper;
+        this.appointmentReqFOMapper = appointmentReqFOMapper;
+        this.appointmentFOMapper = appointmentFOMapper;
+        this.windowFOMapper = windowFOMapper;
+        this.windowLinkFOMapper = windowLinkFOMapper;
     }
     /**
      * 获得出生日期
@@ -1132,7 +1160,7 @@ public class NucleicAcidImpl implements NucleicAcid {
                 Long chrgNo = null ;	//1次的结算号
                 String fpNo = null ;  	//1次发票号
                 Long fpID = null  ; //1次发票ID
-                String eachGuide = ""; //1次结算的指引导
+                StringBuilder eachGuide = new StringBuilder(); //1次结算的指引导
 
                 //每个医生的处方串生成列表
                 String[] rec1 =  oneDrRecs.split(",") ;
@@ -1288,7 +1316,8 @@ public class NucleicAcidImpl implements NucleicAcid {
                     if ( asfos!=null && asfos.size() > 0 ) {
                         for (LisRequestFO lisRequestFO: asfos) {
                             lisRequestFO.setChargeid(String.valueOf(chrgNo));
-                            getDao().createFOs(asfos) ;
+                            lisRequestFO.setHisRequestId(smOidGenerate("LIS_SYS_INPUT_REQUEST"));
+                            lisRequestFOMapper.insert(lisRequestFO);
                         }
                     }else {
                         returnMap.put("errorMessage", "保存检验中间表错误！") ;
@@ -1298,20 +1327,22 @@ public class NucleicAcidImpl implements NucleicAcid {
                 }
                 //20180701- end
                 //更新挂号信息
-                for(ClRecipeFO recipeFO : oneDrRecipeFOs){
-                    getDao().updateClRegisterInfo(recipeFO.getEncounterid().toString()) ;
+                for(PcClrecipeFO recipeFO : oneDrRecipeFOs){
+                    PaCLregisterFO paCLregisterFO = paCLregisterMapper.selectById(recipeFO.getEncounterid());
+                    paCLregisterFO.setIscharge("1");
+                    paCLregisterMapper.updateById(paCLregisterFO);
                 }
 
                 //保存移动支付记录表
                 HcMobilePaymentFO hcMobilePaymentFO = new HcMobilePaymentFO() ;
                 hcMobilePaymentFO.setChrgNo(chrgNo.toString()) ;
                 hcMobilePaymentFO.setType("1") ;
-                hcMobilePaymentFO.setPatCardType(inParameter.getCardType());
-                hcMobilePaymentFO.setPatCardNo(inParameter.getCardNo());
-                hcMobilePaymentFO.setHisOrdNum(inParameter.getHisPayNo());
-                hcMobilePaymentFO.setPsOrdNum(inParameter.getWebPayNo());
-                hcMobilePaymentFO.setAgtOrdNum(inParameter.getWebPayNo());
-                hcMobilePaymentFO.setPayMode(inParameter.getPayMethod());
+                hcMobilePaymentFO.setPatCardType("01"); //TODO
+                hcMobilePaymentFO.setPatCardNo(payIn.getHealthCardNo());
+                hcMobilePaymentFO.setHisOrdNum(hisPayNo);
+                hcMobilePaymentFO.setPsOrdNum(payIn.getOrderId());
+                hcMobilePaymentFO.setAgtOrdNum(payIn.getTradeNo());
+                hcMobilePaymentFO.setPayMode(String.valueOf(payCode));
 //							hcMobilePaymentFO.setPayAmt(inParameter.getPayAmt());
 
                 hcMobilePaymentFO.setPayTime(_formatDateTime_wx.format(cal.getTime()));
@@ -1323,36 +1354,39 @@ public class NucleicAcidImpl implements NucleicAcid {
                 hcMobilePaymentFO.setInvoiceNo(fpNo);
 
                 //20180628 Save GuideInfo
-                if(guideList != null && guideList.size() > 0){
+                if(guideList.size() > 0){
 
                     for(String guide : guideList){
                         if(eachGuide.length() == 0){
-                            eachGuide = guide ;
+                            eachGuide = new StringBuilder(guide);
                         }else{
-                            eachGuide = eachGuide + "；" + guide ;
+                            eachGuide.append("；").append(guide);
                         }
                     }
-                    eachGuide = eachGuide +"。";
+                    eachGuide.append("。");
                 }
 
-                hcMobilePaymentFO.setNote(eachGuide);
+                hcMobilePaymentFO.setNote(eachGuide.toString());
 
-                getDao().createFO(hcMobilePaymentFO); //保存hc_MobilePayment
+                hcMobilePaymentFOMapper.insert(hcMobilePaymentFO);//保存hc_MobilePayment
+
 
                 //修改处方结算标志
-                for(ClRecipeFO recipeFO : oneDrRecipeFOs){
+                for(PcClrecipeFO recipeFO : oneDrRecipeFOs){
 
                     recipeFO.setIscharge("1");
                     recipeFO.setChargeid( chrgNo ) ;
                     recipeFO.setChargeoper( _defaultWxUserID) ;
                     recipeFO.setChargetime( cal.getTime() );
                     recipeFO.setVersionid( cal.getTime() ); //20181215
+
+                    pcClrecipeMapper.updateById(recipeFO); //更新cl_recipe
                 }
-                getDao().updateFOs(oneDrRecipeFOs);	//保存cl_recipe
+
 
                 //20181112 begin
                 //检查申请表的处理 复用HIS的算法
-                for(ClRecipeFO recipeFO : oneDrRecipeFOs){
+                for(PcClrecipeFO recipeFO : oneDrRecipeFOs){
 
                     Long bookID = recipeFO.getRequisitionid() ;
 
@@ -1360,14 +1394,11 @@ public class NucleicAcidImpl implements NucleicAcid {
                     if ( bookID != null ) {
                         if (  bookID < 0 ) { //病理申请单处理
 
-
-                            PhysioTherapyReqFO pfo = null;
-
-                            Long reqID = Long.valueOf( -bookID.intValue() );
-                            pfo = getDao().getPhysioTherapyReqFOByReqID(  reqID  ) ;
+                            Long reqID = (long) -bookID.intValue();
+                            PhysioTherapyReqFO pfo  =physioTherapyReqFOMapper.selectById(reqID) ;
                             if (pfo !=null ) {
                                 pfo.setIscharge( "1" );
-                                getDao().updateFO( pfo ) ; //EX_DATA_PHYSIOTHERAPYREQ
+                                physioTherapyReqFOMapper.updateById(pfo); //EX_DATA_PHYSIOTHERAPYREQ
                             }
 
 
@@ -1378,7 +1409,7 @@ public class NucleicAcidImpl implements NucleicAcid {
                             //recipe.requestid > appointreq.oid
                             //22的设备直接关联 处方表申请记录
                             //22无预约，直接申请
-                            AppointmentReqFO reqVO = getDao().getAppointmentReqFOByReqID(bookID);
+                            AppointmentReqFO reqVO = appointmentReqFOMapper.selectById(bookID);
                             if(reqVO != null){
 
                                 if(new Long(22).equals(reqVO.getDevicetype())){
@@ -1386,8 +1417,8 @@ public class NucleicAcidImpl implements NucleicAcid {
                                     Long bookStatus = reqVO.getBookstatus();
                                     if(new Long(1).equals(bookStatus)){
 
-                                        reqVO.setBookstatus(new Long(6));
-                                        getDao().updateFO( reqVO ) ; //AppointmentReqFO
+                                        reqVO.setBookstatus(6L);
+                                       appointmentReqFOMapper.updateById( reqVO ) ; //AppointmentReqFO
                                     }
                                 }
                             }
@@ -1395,13 +1426,13 @@ public class NucleicAcidImpl implements NucleicAcid {
                             if(!isException){
                                 //recipe.requestid > appoint.bookid
                                 //先预约，再申请
-                                AppointmentFO fo = getDao().getAppointmentFOByReqID( bookID);
+                                AppointmentFO fo = appointmentFOMapper.selectById( bookID);
 
                                 if(fo != null){
 
-                                    fo.setBookstatus(new Long(6));
+                                    fo.setBookstatus(6L);
 
-                                    getDao().updateFO( fo ) ; //AppointmentFO
+                                    appointmentFOMapper.updateById( fo ) ; //AppointmentFO
                                     //Pacs接口
                                     Long pacsItemID = fo.getPacsitemid();
                                     Long encounterID = fo.getEncounterid();
@@ -1411,14 +1442,14 @@ public class NucleicAcidImpl implements NucleicAcid {
                                         Long bbid = null;
                                         bbid = fo.getRequisitionid() ;
                                         //appoint.requestid > appointreq.oid
-                                        AppointmentReqFO reqPacs = getDao().getAppointmentReqFOByReqID(bbid);
+                                        AppointmentReqFO reqPacs =  appointmentReqFOMapper.selectById(bbid);
                                         if( reqPacs != null ) {
                                             Long bookStatus = reqPacs.getBookstatus();
 
                                             if(new Long(1).equals(bookStatus)){
 
-                                                reqPacs.setBookstatus( new Long(6));
-                                                getDao().updateFO( reqPacs ) ; //AppointmentReqFO
+                                                reqPacs.setBookstatus(6L);
+                                                appointmentReqFOMapper.updateById( reqPacs ) ; //AppointmentReqFO
                                             }
 
 
@@ -1455,62 +1486,51 @@ public class NucleicAcidImpl implements NucleicAcid {
 
 
                 //修改his支付单据表记录状态
-                MobilePayHisPayNoFO hispayFO = null;
-                hispayFO = getDao().getHisPayNoByID(hisPayNo);
+                MobilePayHisPayNoFO hispayFO = mobilePayHisPayNoFOMapper.selectById(hisPayNo);
                 hispayFO.setSite(  chrgNo.toString()   );
                 hispayFO.setIsChrg("1") ;
-                getDao().updateFO(hispayFO) ;
+               mobilePayHisPayNoFOMapper.updateById(hispayFO) ;
 
                 chrgNoList.add(chrgNo) ;
                 fpNoList.add(fpNo) ;
 
                 //20180911 - begin
                 //分配药口窗口
-                List mdqueues = new ArrayList() ;
+                List mdqueues;
                 List mdrecs  = new ArrayList() ;
                 Long cfdeptid = null;
                 Long ii = null;
                 Long cfid = null ;
 
-                for(ClRecipeFO recipeFO : oneDrRecipeFOs){
+                for(PcClrecipeFO recipeFO : oneDrRecipeFOs){
                     cfid = recipeFO.getRecipeid( ) ;
-                    ii = new Long(-1) ;
+                    ii = (long) -1;
                     cfdeptid = recipeFO.getDeptid() ;
 
                     //20181122 begin
                     //itemsource
                     try {
-                        ii = getDao().getNeedDispMed1(cfid  ) ;
+                        ii = nucleicAcidMapper.getNeedDispMed1(cfid) ;
                     }catch(Exception e) {
                         returnMap.put("errorMessage", "getNeedDispMed1 error"  ) ;
                     }
 
 
-                    ErrorLogUtil.error(
-                            Calendar.getInstance().getTime()
-                                    + " getNeedDispMed1 cfh = "+ cfid
-                                    +"，ii1 = ： " +  ii
-
-                    ) ;
+                    log.error(Calendar.getInstance().getTime()  + " getNeedDispMed1 cfh = " + cfid  + "，ii1 = ： " + ii);
 
                     if ( ii != null && ii > 0 ) {
                         //case 1 :
                         //有非加收的药品，要分窗口
                     }else {
-                        ii = new Long(-1) ;
+                        ii = (long) -1;
                         //ma_agent
                         try {
-                            ii = getDao().getNeedDispMed2(cfid  ) ;
+                            ii = nucleicAcidMapper.getNeedDispMed2(cfid  ) ;
                         }catch(Exception e) {
                             returnMap.put("errorMessage", "getNeedDispMed2 error"  ) ;
                         }
 
-                        ErrorLogUtil.error(
-                                Calendar.getInstance().getTime()
-                                        + " getNeedDispMed2 cfh = "+ cfid
-                                        +"，ii2 = ： " +  ii
-
-                        ) ;
+                        log.error(Calendar.getInstance().getTime() + " getNeedDispMed2 cfh = "+ cfid +"，ii2 = ： " +  ii) ;
 
                         if ( ii!=null && ii > 0 ) {
                             //有ma_agent，要分窗口
@@ -1529,9 +1549,8 @@ public class NucleicAcidImpl implements NucleicAcid {
                     itMap.put("recipe" , recipeFO);
 
                     //处方明细
-                    ClRecentryFO aa = null;
-                    aa = getDao().getRecentryFO(recipeFO.getRecipeid( ) );
-                    List entryList = new ArrayList();
+                    ClRecentryFO aa = getDao().getRecentryFO(recipeFO.getRecipeid( ) );
+                    List<ClRecentryFO> entryList = new ArrayList<>();
                     entryList.add(aa) ;
 
                     itMap.put("entrys" , entryList);
@@ -1543,21 +1562,13 @@ public class NucleicAcidImpl implements NucleicAcid {
                 //不同也报错
 
                 //根据算法来取收费窗口 ，普诊或急诊
-                Long win = null ;
-                boolean lb = true;
-                //verify time then set lb value
-
-                if ( lb ) {
-                    win = _defaultChargeWin ;
-                }else {
-                    win = _defaultChargeWinJZ ;
-                }
-                if (  cfdeptid != null && new Long(114).equals(cfdeptid)  ) {
-                    win = new Long( 41 ) ; //41	 	镇区收费窗口1
+                Long win  = _defaultChargeWin ;
+                if (new Long(114).equals(cfdeptid)) {
+                    win = 41L; //41	 	镇区收费窗口1
                 }
 
-                if (  cfdeptid != null && new Long(204).equals(cfdeptid)  ) {
-                    win = new Long( 56 ) ;
+                if (new Long(204).equals(cfdeptid)) {
+                    win = 56L;
                     //20210913 发热门诊处方以发热收费窗来处理
                 }
 
@@ -1577,7 +1588,7 @@ public class NucleicAcidImpl implements NucleicAcid {
                         Boolean needDispense = (Boolean) retMap.get("NeedDispense");
                         mdqueues = (List) retMap.get("mdQueue");
 
-                        ErrorLogUtil.error(
+                        log.error(
                                 Calendar.getInstance().getTime()
                                         + " 结算： hisPayNo = "+hisPayNo
                                         +"，chargeWin = " +win
@@ -1663,4 +1674,626 @@ public class NucleicAcidImpl implements NucleicAcid {
 
         return returnMap ;
     }
+
+    /**
+     * 分配窗口
+     * @param recipes
+     * @param windowID
+     * @return
+     * @throws Exception
+     */
+    public Map<String, Object> allocateRecipes2Map( List recipes, Long windowID )throws Exception {
+
+        Map<String, Object> retMap = new HashMap<>();
+        List retList = new ArrayList<>();
+        Map<String, Object> recipeMap = new HashMap<>();//存放处方:需要配药的处方
+
+        Boolean NeedDispense = false ;
+        try {
+            if(recipes.size() > 0 ){
+
+                //取当前时间
+                Date currTime = DateTimeUtil.normalizeDate(new Date(), DateTimeUtil.DATETIME);
+
+                //从窗口缓存中读取窗口状态和窗口对应关系。 缓存区域为：CACHE_WINDOW，缓存值为包含窗口信息和对应关系的map
+                //ReplaceMent
+                Map<String, Object> window = getWinLink( windowID ) ;
+
+                WindowFO windowFO = (WindowFO) window.get("window"); //1 winID
+                List windowLinkFOs = (List) window.get("links"); //N toWinLinks
+
+//				Map recipeMap = new HashMap();//存放处方
+
+                List agentList = new ArrayList<>();//代发材料处方
+                PatientinfoFO patient = null;
+
+                String isEmployee =null ;
+                String isPriorityPack = null; //优先配药标识
+
+                Long emergency = 109L;//急诊内科
+                Long emergency1 = 208L;//急诊外科
+
+                Long child = 136L;
+                Long child1 = 137L;
+
+                //20200817 added begin
+                Long child4 = 205L;
+                Long child2 = 88L;
+                Long child3 = 89L;
+                //20200817 added end
+
+                //预处理处方
+                for (Object o : recipes) {
+                    Map recipe = (Map) o;
+                    PcClrecipeFO recipeVO = (PcClrecipeFO) recipe.get("recipe");
+                    List recipeEntryVOs = (List) recipe.get("entrys");
+                    Long recipeID = recipeVO.getRecipeid();
+                    Long patientID = recipeVO.getPatientid();
+
+                    boolean isNeedDispense = false;
+
+                    Long cataID = recipeVO.getCataid(); // 处方类型
+                    if (cataID == null) {
+                        continue;
+                    }
+
+
+                    for (Object entryVO : recipeEntryVOs) {
+                        ClRecentryFO recipeEntryVO = (ClRecentryFO) entryVO;
+
+                        // 是否自备药
+//						if (recipeEntryVO.getIsProvide().booleanValue()) continue;
+
+                        //加收项目不参与判断
+                        Long itemsource = recipeEntryVO.getItemsource();
+                        if (new Long(2).equals(itemsource)
+                                || new Long(3).equals(itemsource)
+                                || new Long(4).equals(itemsource)
+                                || new Long(7).equals(itemsource)
+                                || new Long(8).equals(itemsource)
+                                || new Long(9).equals(itemsource)
+                                || new Long(12).equals(itemsource)
+                                || new Long(13).equals(itemsource)) {
+                            continue;
+                        }
+
+                        Long entryType = recipeEntryVO.getEntrytype(); // 明细类型，即医嘱项类型
+                        if (entryType.equals(1L)
+                                || entryType.equals(3L)
+                                || entryType.equals(4L)
+                                || entryType.equals(5L)) {
+
+                            //判断是否有优先配药的药品,若处方是否时，取药品的优先级
+                            if (new String("0").equals(recipeVO.getIsprioritypack())) {
+
+                                String isdrugPriorpack = "0";
+                                isdrugPriorpack = nucleicAcidMapper.getDrugisPriortyPack(recipeEntryVO.getItemid());
+                                recipeVO.setIsprioritypack(isdrugPriorpack);
+
+                            }
+
+                            if (new String("1").equals(recipeVO.getIsprioritypack())) {
+                                isPriorityPack = "1";
+                            }
+
+                            isNeedDispense = true;
+
+                            Long executeDept = recipeEntryVO.getExeutedept();
+
+                        } else {
+                            Long itemID = recipeEntryVO.getItemid();
+                            Long encounterType = 1L;
+                            String key = encounterType.toString() + "/" + itemID.toString();
+
+                            AgentFO agentfo = null;
+
+                            //ReplaceMent
+                            agentfo = getDao().getAgentFO(encounterType, itemID);
+                            if (agentfo != null) {
+
+                                isNeedDispense = true;
+
+                                Long agentDeptID = agentfo.getDeptID();
+
+                                if (!agentList.contains(recipeID)) {
+                                    agentList.add(recipeID);
+                                }
+                            }
+                        }
+                    }
+
+                    log.error(Calendar.getInstance().getTime() + "需要分配窗口吗？ ,第1次 ： recipeID = "
+                            + recipeID + " ， isNeedDispense = " + isNeedDispense);
+
+                    //20181122 begin
+                    //verify two //get recentry or get ma_agent
+                    //再判断一次分配 窗口
+                    if (!isNeedDispense) {
+
+                        Long ii = null;
+                        //用SQL来查询1
+                        ii = getDao().getNeedDispMed1(recipeID);
+
+                        if (ii != null && ii > 0) {
+                            isNeedDispense = true;
+                        }
+
+                        log.error(Calendar.getInstance().getTime() + "需要分配窗口吗？ ,第2次 ： recipeID = "
+                                + recipeID + " ， isNeedDispense = " + isNeedDispense);
+                    }
+                    if (!isNeedDispense) {
+
+                        Long ii = null;
+                        //用SQL来查询1:ma_agent
+                        ii = nucleicAcidMapper.getNeedDispMed2(recipeID);
+
+                        if (ii != null && ii > 0) {
+                            isNeedDispense = true;
+                        }
+                        ErrorLogUtil.error(Calendar.getInstance().getTime() + "需要分配窗口吗？ ,第3次 ： recipeID = "
+                                + recipeID + " ， isNeedDispense = " + isNeedDispense);
+                    }
+
+                    //20181122  end
+                    if (isNeedDispense) {
+                        recipeMap.put(recipeID, recipe);
+
+
+                        if (patient == null) {
+                            patient = getDao().getPatinfoByPid(patientID);
+                            isEmployee = patient.getIsemployee();
+                        }
+                    }
+                }
+
+                Long MDwindow = null;
+                Long MRwindow = null;
+
+                //开始计算配药窗口
+                List toCreate = new ArrayList();
+                Iterator reIt = recipeMap.values().iterator();
+                while(reIt.hasNext()){
+                    //取第一张处方，计算分配窗口
+                    Map recipe = (Map)reIt.next();
+
+                    ClRecipeFO recipeVO = (ClRecipeFO) recipe.get("recipe");
+
+                    Long rightWindow = null;
+                    List toWindowIDs = new ArrayList();
+                    Long cataID = recipeVO.getCataid();
+                    String isManual = recipeVO.getIsmanual();
+
+
+                    Long recipeType = recipeVO.getRecipetype();//处方种类
+                    Long recipeClass = recipeVO.getRecipeclass();//处方类型
+                    Long deptID = recipeVO.getDeptid();//开方科室
+
+                    boolean isMD = false; //是否中药处方
+                    boolean isFirst = false;//是否优先处方
+                    boolean isChild = false;//是否儿科处方
+
+
+                    if(new Long(2).equals(recipeType)){//中药处方
+                        isMD = true;
+                    }
+
+                    if( new Long(2).equals(recipeClass)
+                            || new String("1").equals(  isEmployee )
+                            || new String("1").equals(  isPriorityPack) )  {//优先处方
+                        isFirst = true;
+                    }
+
+//					if(new Long(3).equals(recipeClass)){
+//						isChild = true;
+//					}
+                    //20200817 added , 7 depts
+                    if(emergency.equals(deptID)
+                            || emergency1.equals(deptID)
+                            || child.equals(deptID)
+                            || child1.equals(deptID)
+                            || child2.equals(deptID)
+                            || child3.equals(deptID)
+                            || child4.equals(deptID)){//黄江特殊情况，急诊科和儿科处方 发送到统一优先窗口
+                        isChild = true;
+                    }
+
+                    if(isMD){
+                        if(MDwindow != null){
+                            rightWindow = MDwindow;
+                        }
+                    }else{
+                        if(MRwindow != null){
+                            rightWindow = MRwindow;
+                        }
+                    }
+
+
+                    //如果是优先处方，先看看有没有满足条件的优先窗口已经打开，有则分配进去，没有再按正常处方计算分配窗口
+                    if(isFirst && rightWindow == null){
+                        Iterator itWindowLinkVOs = windowLinkFOs.iterator();
+                        while (itWindowLinkVOs.hasNext()) {
+                            WindowLinkFO windowLinkVO = (WindowLinkFO) itWindowLinkVOs.next();
+                            if (!windowLinkVO.getIsDrip().booleanValue()) {
+                                if (cataID.equals(windowLinkVO.getRecType())) {
+                                    Long toWinID = windowLinkVO.getToWinID();
+                                    WindowFO toWindowVO = getDao().getWindowFO(toWinID);
+                                    if (toWindowVO.getIsFirst() && new Long(1).equals(toWindowVO.getWinStatus())) { // 窗口状态为打开
+                                        toWindowIDs.add(toWinID);
+                                    }
+                                }
+                            }
+                        }
+
+                        if(toWindowIDs.size() == 1){
+                            rightWindow = (Long) toWindowIDs.get(0);
+                            if(isMD){
+                                MDwindow = rightWindow;
+                            }else{
+                                MRwindow = rightWindow;
+                            }
+                        }else if(toWindowIDs.size() > 1){
+                            // 多个符合的窗口以侯药人数最少的为准
+                            int minPeoples = -1;
+
+                            Iterator itToWinIDs = toWindowIDs.iterator();
+                            while (itToWinIDs.hasNext()) {
+                                Long winID = (Long) itToWinIDs.next();
+
+                                // 获得该窗口的侯药队列
+                                List pharmacyQueueVOs = getDao().getPharmacyQueueFOs(winID) ;
+
+                                int peoples = pharmacyQueueVOs.size();
+                                if (minPeoples == -1 || minPeoples > peoples) {
+                                    minPeoples = peoples;
+                                    rightWindow = winID;
+
+                                    if(isMD){
+                                        MDwindow = rightWindow;
+                                    }else{
+                                        MRwindow = rightWindow;
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    //如果是儿科处方，先看看有没有满足条件的儿科窗口已经打开，有则分配进去，没有再按正常处方计算分配窗口
+                    if(isChild && rightWindow == null){
+                        Iterator itWindowLinkVOs = windowLinkFOs.iterator();
+                        while (itWindowLinkVOs.hasNext()) {
+                            WindowLinkFO windowLinkVO = (WindowLinkFO) itWindowLinkVOs.next();
+                            if ( !windowLinkVO.getIsDrip().booleanValue() ) {
+                                if (cataID.equals(windowLinkVO.getRecType())) {
+                                    Long toWinID = windowLinkVO.getToWinID();
+                                    WindowFO toWindowVO = getDao().getWindowFO(toWinID);
+                                    if (toWindowVO.getIsChild() && new Long(1).equals(toWindowVO.getWinStatus())) { // 窗口状态为打开
+                                        toWindowIDs.add(toWinID);
+                                    }
+                                }
+                            }
+                        }
+
+                        if(toWindowIDs.size() == 1){
+                            rightWindow = (Long) toWindowIDs.get(0);
+                            if(isMD){
+                                MDwindow = rightWindow;
+                            }else{
+                                MRwindow = rightWindow;
+                            }
+                        }else if(toWindowIDs.size() > 1){
+                            // 多个符合的窗口以侯药人数最少的为准
+                            int minPeoples = -1;
+
+                            Iterator itToWinIDs = toWindowIDs.iterator();
+                            while (itToWinIDs.hasNext()) {
+                                Long winID = (Long) itToWinIDs.next();
+
+                                // 获得该窗口的侯药队列
+                                List pharmacyQueueVOs = getDao().getPharmacyQueueFOs(winID);
+
+                                int peoples = pharmacyQueueVOs.size();
+                                if (minPeoples == -1 || minPeoples > peoples) {
+                                    minPeoples = peoples;
+                                    rightWindow = winID;
+
+                                    if(isMD){
+                                        MDwindow = rightWindow;
+                                    }else{
+                                        MRwindow = rightWindow;
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    if(rightWindow == null){
+                        //第一遍找有没有状态为打开的窗口
+                        Iterator itWindowLinkVOs = windowLinkFOs.iterator();
+                        while (itWindowLinkVOs.hasNext()) {
+                            WindowLinkFO windowLinkVO = (WindowLinkFO) itWindowLinkVOs.next();
+                            if (!windowLinkVO.getIsDrip().booleanValue()) {
+                                if (cataID.equals(windowLinkVO.getRecType())) {
+                                    Long toWinID = windowLinkVO.getToWinID();
+                                    WindowFO toWindowVO = getDao().getWindowFO(toWinID);
+                                    if (!toWindowVO.getIsFirst()
+                                            && !toWindowVO.getIsChild()
+                                            && new Long(1).equals(toWindowVO.getWinStatus())) { // 窗口状态为打开
+                                        toWindowIDs.add(toWinID);
+                                    }
+                                }
+                            }
+                        }
+
+                        if(toWindowIDs.size() == 1){
+                            rightWindow = (Long) toWindowIDs.get(0);
+                            if(isMD){
+                                MDwindow = rightWindow;
+                            }else{
+                                MRwindow = rightWindow;
+                            }
+                        }else if(toWindowIDs.size() > 1){
+                            // 多个符合的窗口以侯药人数最少的为准
+                            int minPeoples = -1;
+
+                            Iterator itToWinIDs = toWindowIDs.iterator();
+                            while (itToWinIDs.hasNext()) {
+                                Long winID = (Long) itToWinIDs.next();
+
+                                // 获得该窗口的侯药队列
+                                List pharmacyQueueVOs = getDao().getPharmacyQueueFOs(winID);
+
+                                int peoples = pharmacyQueueVOs.size();
+                                if (minPeoples == -1 || minPeoples > peoples) {
+                                    minPeoples = peoples;
+                                    rightWindow = winID;
+
+                                    if(isMD){
+                                        MDwindow = rightWindow;
+                                    }else{
+                                        MRwindow = rightWindow;
+                                    }
+                                }
+                            }
+                        }else{
+                            //第一遍没找到,第二遍找状态为挂起的窗口
+                            itWindowLinkVOs = windowLinkFOs.iterator();
+                            while (itWindowLinkVOs.hasNext()) {
+                                WindowLinkFO windowLinkVO = (WindowLinkFO) itWindowLinkVOs.next();
+                                if (!windowLinkVO.getIsDrip().booleanValue()) {
+                                    if (cataID.equals(windowLinkVO.getRecType())) {
+                                        Long toWinID = windowLinkVO.getToWinID();
+                                        WindowFO toWindowVO = getDao().getWindowFO(toWinID);
+                                        if (!toWindowVO.getIsFirst()
+                                                && !toWindowVO.getIsChild()
+                                                && new Long(2).equals(toWindowVO.getWinStatus())) { // 窗口状态为挂起
+                                            toWindowIDs.add(toWinID);
+                                        }
+                                    }
+                                }
+                            }
+
+                            if(toWindowIDs.size() > 0){
+                                rightWindow = (Long) toWindowIDs.get(0);
+                                if(isMD){
+                                    MDwindow = rightWindow;
+                                }else{
+                                    MRwindow = rightWindow;
+                                }
+                            }else{
+                                //第二遍没找到,第三遍找状态为关闭的窗口
+                                itWindowLinkVOs = windowLinkFOs.iterator();
+                                while (itWindowLinkVOs.hasNext()) {
+                                    WindowLinkFO windowLinkVO = (WindowLinkFO) itWindowLinkVOs.next();
+                                    if (!windowLinkVO.getIsDrip().booleanValue()) {
+                                        if (cataID.equals(windowLinkVO.getRecType())) {
+                                            Long toWinID = windowLinkVO.getToWinID();
+
+                                            WindowFO toWindowVO = getDao().getWindowFO(toWinID);
+                                            if (!toWindowVO.getIsFirst()
+                                                    && !toWindowVO.getIsChild()
+                                                    && new Long(3).equals(toWindowVO.getWinStatus())) { // 窗口状态为关闭
+                                                toWindowIDs.add(toWinID);
+                                            }
+                                        }
+                                    }
+                                }
+
+                                if(toWindowIDs.size() > 0 ){
+                                    rightWindow = (Long) toWindowIDs.get(0);
+
+                                    if(isMD){
+                                        MDwindow = rightWindow;
+                                    }else{
+                                        MRwindow = rightWindow;
+                                    }
+                                }else{
+                                    //此时没找到应该是维护有问题将窗口号设置为-1,黄江特殊处理为西药放进西药房，中药放进中药房
+
+                                    itWindowLinkVOs = windowLinkFOs.iterator();
+                                    while (itWindowLinkVOs.hasNext()) {
+                                        WindowLinkFO windowLinkVO = (WindowLinkFO) itWindowLinkVOs.next();
+                                        if (!windowLinkVO.getIsDrip().booleanValue()) {
+                                            Long toWinID = windowLinkVO.getToWinID();
+
+                                            WindowFO toWindowVO = getDao().getWindowFO(toWinID);
+                                            if (!toWindowVO.getIsFirst()
+                                                    && !toWindowVO.getIsChild()
+                                                    && new Long(1).equals(toWindowVO.getWinStatus())) { // 窗口状态为关闭
+                                                if(isMD){
+                                                    if(new Long(50).equals(toWindowVO.getDeptID())){
+                                                        rightWindow = toWinID;
+                                                        break;
+                                                    }
+                                                }else{
+                                                    if(new Long(52).equals(toWindowVO.getDeptID())){
+                                                        rightWindow = toWinID;
+                                                        break;
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+
+                                    if(rightWindow == null){
+                                        itWindowLinkVOs = windowLinkFOs.iterator();
+                                        while (itWindowLinkVOs.hasNext()) {
+                                            WindowLinkFO windowLinkVO = (WindowLinkFO) itWindowLinkVOs.next();
+                                            if (!windowLinkVO.getIsDrip().booleanValue()) {
+                                                Long toWinID = windowLinkVO.getToWinID();
+
+                                                WindowFO toWindowVO = getDao().getWindowFO(toWinID);
+                                                if (!toWindowVO.getIsFirst()
+                                                        && !toWindowVO.getIsChild()
+                                                        && new Long(2).equals(toWindowVO.getWinStatus())) { // 窗口状态为挂起
+                                                    if(isMD){
+                                                        if(new Long(50).equals(toWindowVO.getDeptID())){
+                                                            rightWindow = toWinID;
+                                                            break;
+                                                        }
+                                                    }else{
+                                                        if(new Long(52).equals(toWindowVO.getDeptID())){
+                                                            rightWindow = toWinID;
+                                                            break;
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+
+                                    if(rightWindow == null){
+                                        itWindowLinkVOs = windowLinkFOs.iterator();
+                                        while (itWindowLinkVOs.hasNext()) {
+                                            WindowLinkFO windowLinkVO = (WindowLinkFO) itWindowLinkVOs.next();
+                                            if (!windowLinkVO.getIsDrip().booleanValue()) {
+                                                Long toWinID = windowLinkVO.getToWinID();
+
+                                                WindowFO toWindowVO = getDao().getWindowFO(toWinID);
+                                                if (!toWindowVO.getIsFirst()
+                                                        && !toWindowVO.getIsChild()
+                                                        && new Long(3).equals(toWindowVO.getWinStatus())) { // 窗口状态为关闭
+                                                    if(isMD){
+                                                        if(new Long(50).equals(toWindowVO.getDeptID())){
+                                                            rightWindow = toWinID;
+                                                            break;
+                                                        }
+                                                    }else{
+                                                        if(new Long(52).equals(toWindowVO.getDeptID())){
+                                                            rightWindow = toWinID;
+                                                            break;
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+
+                                    if(rightWindow == null){
+                                        rightWindow = new Long(-1);
+                                    }
+
+                                    if(isMD){
+                                        MDwindow = rightWindow;
+                                    }else{
+                                        MRwindow = rightWindow;
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    ErrorLogUtil.error(
+                            Calendar.getInstance().getTime()
+                                    +"分配 窗口map： recipeid = " + recipeVO.getRecipeid()
+                                    + "， rightWindow = "+rightWindow
+                    );
+
+                    if(rightWindow != null){
+                        ClMdqueueFO pharmacyQueueVO = new ClMdqueueFO();
+                        pharmacyQueueVO.setQueueid(null);
+                        pharmacyQueueVO.setPatientid(recipeVO.getPatientid());
+                        pharmacyQueueVO.setEncounterid(recipeVO.getEncounterid());
+                        pharmacyQueueVO.setName(recipeVO.getName());
+                        pharmacyQueueVO.setSex(recipeVO.getSex());
+                        pharmacyQueueVO.setAge(recipeVO.getAge());
+                        pharmacyQueueVO.setRecipeid(recipeVO.getRecipeid() );
+                        pharmacyQueueVO.setDeptid(recipeVO.getDeptid());
+                        pharmacyQueueVO.setDocid(recipeVO.getDocid());
+                        pharmacyQueueVO.setRecipetime(recipeVO.getInputtime());
+                        pharmacyQueueVO.setQueuetime(recipeVO.getChargetime());
+                        pharmacyQueueVO.setChargeoper(recipeVO.getChargeoper());
+                        pharmacyQueueVO.setIsprioritypack(recipeVO.getIsprioritypack());
+
+                        pharmacyQueueVO.setIsincludedrip("1");
+
+                        //是否非药品处方
+                        if(agentList.contains(recipeVO.getRecipeclass())){
+                            pharmacyQueueVO.setIsnotdrug("1");
+                        }else{
+                            pharmacyQueueVO.setIsnotdrug("0");
+                        }
+
+                        pharmacyQueueVO.setQueuestatus(new Long(1));
+                        pharmacyQueueVO.setWindowid(rightWindow);
+                        pharmacyQueueVO.setChargeid(recipeVO.getChargeid());
+                        pharmacyQueueVO.setVersionid( currTime  );
+                        toCreate.add(pharmacyQueueVO);
+                    }
+                }
+
+                if(toCreate.size() > 0){
+                    Iterator aIt = toCreate.iterator();
+                    while(aIt.hasNext()){
+                        ClMdqueueFO pharmacyQueueVO = (ClMdqueueFO) aIt.next();
+                        retList.add(pharmacyQueueVO);
+                    }
+                }
+
+            }
+
+        }
+        catch (Exception e) {
+            log.error(e.getLocalizedMessage());
+
+        }
+
+        if ( recipeMap.size() > 0 ) {
+            NeedDispense = new Boolean( true );
+        }else {
+            NeedDispense = new Boolean( false ); //不需要分配药房
+        }
+
+        retMap.put("NeedDispense", NeedDispense) ;
+        retMap.put("mdQueue", retList) ;
+
+        return retMap;
+    }
+    public Map<String,Object> getWinLink( Long winid ) {
+
+        if (winid == null) {
+            return null;
+        }
+
+        Map<String, Object> content = new HashMap<>();
+
+        WindowFO windowFO;
+
+
+        windowFO = windowFOMapper.selectById(winid); //1 WIndow
+        if (windowFO != null) {
+            QueryWrapper<WindowLinkFO> queryWrapper = new QueryWrapper<>();
+            queryWrapper.eq("winID", winid);
+
+            List<WindowLinkFO> windowLinkFOs = windowLinkFOMapper.selectList(queryWrapper);
+
+
+            content.put("window", windowFO); //1 window
+            content.put("links", windowLinkFOs); //1:N windowLinks
+
+
+        }
+
+        return content;
+    }
+
 }

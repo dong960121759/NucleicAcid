@@ -387,5 +387,18 @@
           and mx.entrytype = 7
           and mx.recipeid in (:cfj)
     </select>
+    <select id="getNeedDispMed1" resultType="java.lang.Long">
+        select count(cfmx.RECIPEID) from PC_CL_DATA_RECIPEentry cfmx
+					where cfmx.recipeid = #{recipeId} and cfmx.ENTRYTYPE in (  1,3,4,5 )
+					 and cfmx.ITEMSOURCE not in (2,3,4,7,8,9,12,13 )
+    </select>
+    <select id="getNeedDispMed2" resultType="java.lang.Long">
+        select count(cfmx.RECIPEID) from MA_AGENT dy , PC_CL_DATA_RECIPEentry cfmx
+		where dy.itemid = cfmx.ITEMID  and cfmx.RECIPEID = #{recipeId}  and dy.ENCOUNTERTYPE = 1
+    </select>
+    <select id="getDrugisPriortyPack" resultType="java.lang.String">
+         select nvl( d.isprioritypack,'0') from ab_orderitem o , PH_DRUGITEM d
+         where o.itemid = #{itemid} and o.drugitemid = d.drugid    and rownum &lt; 2
+    </select>
 
 </mapper>
