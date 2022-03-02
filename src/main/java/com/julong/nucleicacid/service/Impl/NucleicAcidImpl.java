@@ -92,7 +92,7 @@ public class NucleicAcidImpl implements NucleicAcid {
     private final AppointmentFOMapper appointmentFOMapper;
     private final WindowFOMapper windowFOMapper;
     private final WindowLinkFOMapper windowLinkFOMapper;
-
+    private final ClMdqueueFOMapper clMdqueueFOMapper;
     public NucleicAcidImpl(NucleicAcidMapper nucleicAcidMapper, PatientinfoFOMapper patientinfoFOMapper,
                            PatientCardFOMapper patientCardFOMapper, GeneratorNoMapper generatorNoMapper,
                            SmOidGeneratorMapper smOidGeneratorMapper, PaCLRegisterMapper paCLregisterMapper,
@@ -101,7 +101,7 @@ public class NucleicAcidImpl implements NucleicAcid {
                            KingDeeNucleicLogMapper kingDeeNucleicLogMapper, MobilePayHisPayNoFOMapper mobilePayHisPayNoFOMapper,
                            ClChargeFOMapper clChargeFOMapper, ClChrgentryFOMapper clChrgentryFOMapper, ClPaymentFOMapper clPaymentFOMapper,
                            ClInvoiceFOMapper clInvoiceFOMapper, ClInvoentryFOMapper clInvoentryFOMapper,
-                           LisRequestFOMapper lisRequestFOMapper, HcMobilePaymentFOMapper hcMobilePaymentFOMapper, PhysioTherapyReqFOMapper physioTherapyReqFOMapper, AppointmentReqFOMapper appointmentReqFOMapper, AppointmentFOMapper appointmentFOMapper, WindowFOMapper windowFOMapper, WindowLinkFOMapper windowLinkFOMapper) {
+                           LisRequestFOMapper lisRequestFOMapper, HcMobilePaymentFOMapper hcMobilePaymentFOMapper, PhysioTherapyReqFOMapper physioTherapyReqFOMapper, AppointmentReqFOMapper appointmentReqFOMapper, AppointmentFOMapper appointmentFOMapper, WindowFOMapper windowFOMapper, WindowLinkFOMapper windowLinkFOMapper, ClMdqueueFOMapper clMdqueueFOMapper) {
         this.nucleicAcidMapper = nucleicAcidMapper;
         this.patientinfoFOMapper = patientinfoFOMapper;
         this.patientCardFOMapper = patientCardFOMapper;
@@ -126,6 +126,7 @@ public class NucleicAcidImpl implements NucleicAcid {
         this.appointmentFOMapper = appointmentFOMapper;
         this.windowFOMapper = windowFOMapper;
         this.windowLinkFOMapper = windowLinkFOMapper;
+        this.clMdqueueFOMapper = clMdqueueFOMapper;
     }
     /**
      * 获得出生日期
@@ -1112,11 +1113,7 @@ public class NucleicAcidImpl implements NucleicAcid {
                 return returnMap ;
             }
 
-            String preStock ;//计价库存预发
-            String manageStock ; //是否启用库存管理0不启用、1启用不限制、2启用限制录入
 
-            preStock = _preStock ;
-            manageStock = _manageStock ;
             //// end 取系统设置
 
             //取病人信息
@@ -1549,11 +1546,15 @@ public class NucleicAcidImpl implements NucleicAcid {
                     itMap.put("recipe" , recipeFO);
 
                     //处方明细
-                    ClRecentryFO aa = getDao().getRecentryFO(recipeFO.getRecipeid( ) );
-                    List<ClRecentryFO> entryList = new ArrayList<>();
-                    entryList.add(aa) ;
+                    QueryWrapper<ClRecentryFO> queryWrapper = new QueryWrapper<>();
+                    queryWrapper.eq("recipeid",recipeFO.getRecipeid());
+                    List<ClRecentryFO> clRecentryFOS = clRecentryMapper.selectList(queryWrapper);
 
-                    itMap.put("entrys" , entryList);
+//                    ClRecentryFO aa = getDao().getRecentryFO();
+//                    List<ClRecentryFO> entryList = new ArrayList<>();
+//                    entryList.add(aa) ;
+
+                    itMap.put("entrys" , clRecentryFOS);
 
                     mdrecs.add(itMap) ; //做入参
                 }
@@ -1607,8 +1608,10 @@ public class NucleicAcidImpl implements NucleicAcid {
                                     return returnMap ;
 
                                 }
-                                //
-                                getDao().createFOs( mdqueues ) ;
+                                //已经更新主键
+                                for (Object o: mdqueues) {
+                                    clMdqueueFOMapper.insert((ClMdqueueFO) o);
+                                }
                             }else {
                                 returnMap.put("errorMessage", "没有产生候药队列 ！") ;
                                 return returnMap ;
@@ -1685,8 +1688,8 @@ public class NucleicAcidImpl implements NucleicAcid {
     public Map<String, Object> allocateRecipes2Map( List recipes, Long windowID )throws Exception {
 
         Map<String, Object> retMap = new HashMap<>();
-        List retList = new ArrayList<>();
-        Map<String, Object> recipeMap = new HashMap<>();//存放处方:需要配药的处方
+        List<ClMdqueueFO> retList = new ArrayList<>();
+        Map recipeMap = new HashMap<>();//存放处方:需要配药的处方
 
         Boolean NeedDispense = false ;
         try {
@@ -1704,7 +1707,7 @@ public class NucleicAcidImpl implements NucleicAcid {
 
 //				Map recipeMap = new HashMap();//存放处方
 
-                List agentList = new ArrayList<>();//代发材料处方
+                List<Long> agentList = new ArrayList<>();//代发材料处方
                 PatientinfoFO patient = null;
 
                 String isEmployee =null ;
@@ -1788,7 +1791,7 @@ public class NucleicAcidImpl implements NucleicAcid {
                             AgentFO agentfo = null;
 
                             //ReplaceMent
-                            agentfo = getDao().getAgentFO(encounterType, itemID);
+                            agentfo = nucleicAcidMapper.getAgentFO(encounterType, itemID);
                             if (agentfo != null) {
 
                                 isNeedDispense = true;
@@ -1812,7 +1815,7 @@ public class NucleicAcidImpl implements NucleicAcid {
 
                         Long ii = null;
                         //用SQL来查询1
-                        ii = getDao().getNeedDispMed1(recipeID);
+                        ii = nucleicAcidMapper.getNeedDispMed1(recipeID);
 
                         if (ii != null && ii > 0) {
                             isNeedDispense = true;
@@ -1830,7 +1833,7 @@ public class NucleicAcidImpl implements NucleicAcid {
                         if (ii != null && ii > 0) {
                             isNeedDispense = true;
                         }
-                        ErrorLogUtil.error(Calendar.getInstance().getTime() + "需要分配窗口吗？ ,第3次 ： recipeID = "
+                        log.error(Calendar.getInstance().getTime() + "需要分配窗口吗？ ,第3次 ： recipeID = "
                                 + recipeID + " ， isNeedDispense = " + isNeedDispense);
                     }
 
@@ -1840,7 +1843,7 @@ public class NucleicAcidImpl implements NucleicAcid {
 
 
                         if (patient == null) {
-                            patient = getDao().getPatinfoByPid(patientID);
+                            patient = patientinfoFOMapper.selectById(patientID);
                             isEmployee = patient.getIsemployee();
                         }
                     }
@@ -1850,16 +1853,15 @@ public class NucleicAcidImpl implements NucleicAcid {
                 Long MRwindow = null;
 
                 //开始计算配药窗口
-                List toCreate = new ArrayList();
-                Iterator reIt = recipeMap.values().iterator();
-                while(reIt.hasNext()){
+                List<ClMdqueueFO> toCreate = new ArrayList<>();
+                for (Object o : recipeMap.values()) {
                     //取第一张处方，计算分配窗口
-                    Map recipe = (Map)reIt.next();
+                    Map recipe = (Map) o;
 
-                    ClRecipeFO recipeVO = (ClRecipeFO) recipe.get("recipe");
+                    PcClrecipeFO recipeVO = (PcClrecipeFO) recipe.get("recipe");
 
                     Long rightWindow = null;
-                    List toWindowIDs = new ArrayList();
+                    List<Long> toWindowIDs = new ArrayList<>();
                     Long cataID = recipeVO.getCataid();
                     String isManual = recipeVO.getIsmanual();
 
@@ -1873,13 +1875,13 @@ public class NucleicAcidImpl implements NucleicAcid {
                     boolean isChild = false;//是否儿科处方
 
 
-                    if(new Long(2).equals(recipeType)){//中药处方
+                    if (new Long(2).equals(recipeType)) {//中药处方
                         isMD = true;
                     }
 
-                    if( new Long(2).equals(recipeClass)
-                            || new String("1").equals(  isEmployee )
-                            || new String("1").equals(  isPriorityPack) )  {//优先处方
+                    if (new Long(2).equals(recipeClass)
+                            || new String("1").equals(isEmployee)
+                            || new String("1").equals(isPriorityPack)) {//优先处方
                         isFirst = true;
                     }
 
@@ -1887,36 +1889,35 @@ public class NucleicAcidImpl implements NucleicAcid {
 //						isChild = true;
 //					}
                     //20200817 added , 7 depts
-                    if(emergency.equals(deptID)
+                    if (emergency.equals(deptID)
                             || emergency1.equals(deptID)
                             || child.equals(deptID)
                             || child1.equals(deptID)
                             || child2.equals(deptID)
                             || child3.equals(deptID)
-                            || child4.equals(deptID)){//黄江特殊情况，急诊科和儿科处方 发送到统一优先窗口
+                            || child4.equals(deptID)) {//黄江特殊情况，急诊科和儿科处方 发送到统一优先窗口
                         isChild = true;
                     }
 
-                    if(isMD){
-                        if(MDwindow != null){
+                    if (isMD) {
+                        if (MDwindow != null) {
                             rightWindow = MDwindow;
                         }
-                    }else{
-                        if(MRwindow != null){
+                    } else {
+                        if (MRwindow != null) {
                             rightWindow = MRwindow;
                         }
                     }
 
 
                     //如果是优先处方，先看看有没有满足条件的优先窗口已经打开，有则分配进去，没有再按正常处方计算分配窗口
-                    if(isFirst && rightWindow == null){
-                        Iterator itWindowLinkVOs = windowLinkFOs.iterator();
-                        while (itWindowLinkVOs.hasNext()) {
-                            WindowLinkFO windowLinkVO = (WindowLinkFO) itWindowLinkVOs.next();
-                            if (!windowLinkVO.getIsDrip().booleanValue()) {
+                    if (isFirst && rightWindow == null) {
+                        for (Object windowLinkFO : windowLinkFOs) {
+                            WindowLinkFO windowLinkVO = (WindowLinkFO) windowLinkFO;
+                            if (!windowLinkVO.getIsDrip()) {
                                 if (cataID.equals(windowLinkVO.getRecType())) {
                                     Long toWinID = windowLinkVO.getToWinID();
-                                    WindowFO toWindowVO = getDao().getWindowFO(toWinID);
+                                    WindowFO toWindowVO = windowFOMapper.selectById(toWinID);
                                     if (toWindowVO.getIsFirst() && new Long(1).equals(toWindowVO.getWinStatus())) { // 窗口状态为打开
                                         toWindowIDs.add(toWinID);
                                     }
@@ -1924,32 +1925,29 @@ public class NucleicAcidImpl implements NucleicAcid {
                             }
                         }
 
-                        if(toWindowIDs.size() == 1){
+                        if (toWindowIDs.size() == 1) {
                             rightWindow = (Long) toWindowIDs.get(0);
-                            if(isMD){
+                            if (isMD) {
                                 MDwindow = rightWindow;
-                            }else{
+                            } else {
                                 MRwindow = rightWindow;
                             }
-                        }else if(toWindowIDs.size() > 1){
+                        } else if (toWindowIDs.size() > 1) {
                             // 多个符合的窗口以侯药人数最少的为准
                             int minPeoples = -1;
 
-                            Iterator itToWinIDs = toWindowIDs.iterator();
-                            while (itToWinIDs.hasNext()) {
-                                Long winID = (Long) itToWinIDs.next();
-
+                            for (Long winID : toWindowIDs) {
                                 // 获得该窗口的侯药队列
-                                List pharmacyQueueVOs = getDao().getPharmacyQueueFOs(winID) ;
+                                List<ClMdqueueFO> pharmacyQueueVOs = nucleicAcidMapper.getPharmacyQueueFOs(winID);
 
                                 int peoples = pharmacyQueueVOs.size();
                                 if (minPeoples == -1 || minPeoples > peoples) {
                                     minPeoples = peoples;
                                     rightWindow = winID;
 
-                                    if(isMD){
+                                    if (isMD) {
                                         MDwindow = rightWindow;
-                                    }else{
+                                    } else {
                                         MRwindow = rightWindow;
                                     }
                                 }
@@ -1958,14 +1956,13 @@ public class NucleicAcidImpl implements NucleicAcid {
                     }
 
                     //如果是儿科处方，先看看有没有满足条件的儿科窗口已经打开，有则分配进去，没有再按正常处方计算分配窗口
-                    if(isChild && rightWindow == null){
-                        Iterator itWindowLinkVOs = windowLinkFOs.iterator();
-                        while (itWindowLinkVOs.hasNext()) {
-                            WindowLinkFO windowLinkVO = (WindowLinkFO) itWindowLinkVOs.next();
-                            if ( !windowLinkVO.getIsDrip().booleanValue() ) {
+                    if (isChild && rightWindow == null) {
+                        for (Object windowLinkFO : windowLinkFOs) {
+                            WindowLinkFO windowLinkVO = (WindowLinkFO) windowLinkFO;
+                            if (!windowLinkVO.getIsDrip()) {
                                 if (cataID.equals(windowLinkVO.getRecType())) {
                                     Long toWinID = windowLinkVO.getToWinID();
-                                    WindowFO toWindowVO = getDao().getWindowFO(toWinID);
+                                    WindowFO toWindowVO = windowFOMapper.selectById(toWinID);
                                     if (toWindowVO.getIsChild() && new Long(1).equals(toWindowVO.getWinStatus())) { // 窗口状态为打开
                                         toWindowIDs.add(toWinID);
                                     }
@@ -1973,32 +1970,29 @@ public class NucleicAcidImpl implements NucleicAcid {
                             }
                         }
 
-                        if(toWindowIDs.size() == 1){
+                        if (toWindowIDs.size() == 1) {
                             rightWindow = (Long) toWindowIDs.get(0);
-                            if(isMD){
+                            if (isMD) {
                                 MDwindow = rightWindow;
-                            }else{
+                            } else {
                                 MRwindow = rightWindow;
                             }
-                        }else if(toWindowIDs.size() > 1){
+                        } else if (toWindowIDs.size() > 1) {
                             // 多个符合的窗口以侯药人数最少的为准
                             int minPeoples = -1;
 
-                            Iterator itToWinIDs = toWindowIDs.iterator();
-                            while (itToWinIDs.hasNext()) {
-                                Long winID = (Long) itToWinIDs.next();
-
+                            for (Long winID : toWindowIDs) {
                                 // 获得该窗口的侯药队列
-                                List pharmacyQueueVOs = getDao().getPharmacyQueueFOs(winID);
+                                List<ClMdqueueFO> pharmacyQueueVOs = nucleicAcidMapper.getPharmacyQueueFOs(winID);
 
                                 int peoples = pharmacyQueueVOs.size();
                                 if (minPeoples == -1 || minPeoples > peoples) {
                                     minPeoples = peoples;
                                     rightWindow = winID;
 
-                                    if(isMD){
+                                    if (isMD) {
                                         MDwindow = rightWindow;
-                                    }else{
+                                    } else {
                                         MRwindow = rightWindow;
                                     }
                                 }
@@ -2006,15 +2000,14 @@ public class NucleicAcidImpl implements NucleicAcid {
                         }
                     }
 
-                    if(rightWindow == null){
+                    if (rightWindow == null) {
                         //第一遍找有没有状态为打开的窗口
-                        Iterator itWindowLinkVOs = windowLinkFOs.iterator();
-                        while (itWindowLinkVOs.hasNext()) {
-                            WindowLinkFO windowLinkVO = (WindowLinkFO) itWindowLinkVOs.next();
-                            if (!windowLinkVO.getIsDrip().booleanValue()) {
+                        for (Object windowLinkFO : windowLinkFOs) {
+                            WindowLinkFO windowLinkVO = (WindowLinkFO) windowLinkFO;
+                            if (!windowLinkVO.getIsDrip()) {
                                 if (cataID.equals(windowLinkVO.getRecType())) {
                                     Long toWinID = windowLinkVO.getToWinID();
-                                    WindowFO toWindowVO = getDao().getWindowFO(toWinID);
+                                    WindowFO toWindowVO =windowFOMapper.selectById(toWinID);
                                     if (!toWindowVO.getIsFirst()
                                             && !toWindowVO.getIsChild()
                                             && new Long(1).equals(toWindowVO.getWinStatus())) { // 窗口状态为打开
@@ -2024,45 +2017,41 @@ public class NucleicAcidImpl implements NucleicAcid {
                             }
                         }
 
-                        if(toWindowIDs.size() == 1){
+                        if (toWindowIDs.size() == 1) {
                             rightWindow = (Long) toWindowIDs.get(0);
-                            if(isMD){
+                            if (isMD) {
                                 MDwindow = rightWindow;
-                            }else{
+                            } else {
                                 MRwindow = rightWindow;
                             }
-                        }else if(toWindowIDs.size() > 1){
+                        } else if (toWindowIDs.size() > 1) {
                             // 多个符合的窗口以侯药人数最少的为准
                             int minPeoples = -1;
 
-                            Iterator itToWinIDs = toWindowIDs.iterator();
-                            while (itToWinIDs.hasNext()) {
-                                Long winID = (Long) itToWinIDs.next();
-
+                            for (Long winID : toWindowIDs) {
                                 // 获得该窗口的侯药队列
-                                List pharmacyQueueVOs = getDao().getPharmacyQueueFOs(winID);
+                                List<ClMdqueueFO> pharmacyQueueVOs = nucleicAcidMapper.getPharmacyQueueFOs(winID);
 
                                 int peoples = pharmacyQueueVOs.size();
                                 if (minPeoples == -1 || minPeoples > peoples) {
                                     minPeoples = peoples;
                                     rightWindow = winID;
 
-                                    if(isMD){
+                                    if (isMD) {
                                         MDwindow = rightWindow;
-                                    }else{
+                                    } else {
                                         MRwindow = rightWindow;
                                     }
                                 }
                             }
-                        }else{
+                        } else {
                             //第一遍没找到,第二遍找状态为挂起的窗口
-                            itWindowLinkVOs = windowLinkFOs.iterator();
-                            while (itWindowLinkVOs.hasNext()) {
-                                WindowLinkFO windowLinkVO = (WindowLinkFO) itWindowLinkVOs.next();
-                                if (!windowLinkVO.getIsDrip().booleanValue()) {
+                            for (Object windowLinkFO : windowLinkFOs) {
+                                WindowLinkFO windowLinkVO = (WindowLinkFO) windowLinkFO;
+                                if (!windowLinkVO.getIsDrip()) {
                                     if (cataID.equals(windowLinkVO.getRecType())) {
                                         Long toWinID = windowLinkVO.getToWinID();
-                                        WindowFO toWindowVO = getDao().getWindowFO(toWinID);
+                                        WindowFO toWindowVO = windowFOMapper.selectById(toWinID);
                                         if (!toWindowVO.getIsFirst()
                                                 && !toWindowVO.getIsChild()
                                                 && new Long(2).equals(toWindowVO.getWinStatus())) { // 窗口状态为挂起
@@ -2072,23 +2061,22 @@ public class NucleicAcidImpl implements NucleicAcid {
                                 }
                             }
 
-                            if(toWindowIDs.size() > 0){
-                                rightWindow = (Long) toWindowIDs.get(0);
-                                if(isMD){
+                            if (toWindowIDs.size() > 0) {
+                                rightWindow = toWindowIDs.get(0);
+                                if (isMD) {
                                     MDwindow = rightWindow;
-                                }else{
+                                } else {
                                     MRwindow = rightWindow;
                                 }
-                            }else{
+                            } else {
                                 //第二遍没找到,第三遍找状态为关闭的窗口
-                                itWindowLinkVOs = windowLinkFOs.iterator();
-                                while (itWindowLinkVOs.hasNext()) {
-                                    WindowLinkFO windowLinkVO = (WindowLinkFO) itWindowLinkVOs.next();
-                                    if (!windowLinkVO.getIsDrip().booleanValue()) {
+                                for (Object windowLinkFO : windowLinkFOs) {
+                                    WindowLinkFO windowLinkVO = (WindowLinkFO) windowLinkFO;
+                                    if (!windowLinkVO.getIsDrip()) {
                                         if (cataID.equals(windowLinkVO.getRecType())) {
                                             Long toWinID = windowLinkVO.getToWinID();
 
-                                            WindowFO toWindowVO = getDao().getWindowFO(toWinID);
+                                            WindowFO toWindowVO = windowFOMapper.selectById(toWinID);
                                             if (!toWindowVO.getIsFirst()
                                                     && !toWindowVO.getIsChild()
                                                     && new Long(3).equals(toWindowVO.getWinStatus())) { // 窗口状态为关闭
@@ -2098,34 +2086,33 @@ public class NucleicAcidImpl implements NucleicAcid {
                                     }
                                 }
 
-                                if(toWindowIDs.size() > 0 ){
+                                if (toWindowIDs.size() > 0) {
                                     rightWindow = (Long) toWindowIDs.get(0);
 
-                                    if(isMD){
+                                    if (isMD) {
                                         MDwindow = rightWindow;
-                                    }else{
+                                    } else {
                                         MRwindow = rightWindow;
                                     }
-                                }else{
+                                } else {
                                     //此时没找到应该是维护有问题将窗口号设置为-1,黄江特殊处理为西药放进西药房，中药放进中药房
 
-                                    itWindowLinkVOs = windowLinkFOs.iterator();
-                                    while (itWindowLinkVOs.hasNext()) {
-                                        WindowLinkFO windowLinkVO = (WindowLinkFO) itWindowLinkVOs.next();
-                                        if (!windowLinkVO.getIsDrip().booleanValue()) {
+                                    for (Object windowLinkFO : windowLinkFOs) {
+                                        WindowLinkFO windowLinkVO = (WindowLinkFO) windowLinkFO;
+                                        if (!windowLinkVO.getIsDrip()) {
                                             Long toWinID = windowLinkVO.getToWinID();
 
-                                            WindowFO toWindowVO = getDao().getWindowFO(toWinID);
+                                            WindowFO toWindowVO = windowFOMapper.selectById(toWinID);
                                             if (!toWindowVO.getIsFirst()
                                                     && !toWindowVO.getIsChild()
                                                     && new Long(1).equals(toWindowVO.getWinStatus())) { // 窗口状态为关闭
-                                                if(isMD){
-                                                    if(new Long(50).equals(toWindowVO.getDeptID())){
+                                                if (isMD) {
+                                                    if (new Long(50).equals(toWindowVO.getDeptID())) {
                                                         rightWindow = toWinID;
                                                         break;
                                                     }
-                                                }else{
-                                                    if(new Long(52).equals(toWindowVO.getDeptID())){
+                                                } else {
+                                                    if (new Long(52).equals(toWindowVO.getDeptID())) {
                                                         rightWindow = toWinID;
                                                         break;
                                                     }
@@ -2134,24 +2121,23 @@ public class NucleicAcidImpl implements NucleicAcid {
                                         }
                                     }
 
-                                    if(rightWindow == null){
-                                        itWindowLinkVOs = windowLinkFOs.iterator();
-                                        while (itWindowLinkVOs.hasNext()) {
-                                            WindowLinkFO windowLinkVO = (WindowLinkFO) itWindowLinkVOs.next();
-                                            if (!windowLinkVO.getIsDrip().booleanValue()) {
+                                    if (rightWindow == null) {
+                                        for (Object windowLinkFO : windowLinkFOs) {
+                                            WindowLinkFO windowLinkVO = (WindowLinkFO) windowLinkFO;
+                                            if (!windowLinkVO.getIsDrip()) {
                                                 Long toWinID = windowLinkVO.getToWinID();
 
-                                                WindowFO toWindowVO = getDao().getWindowFO(toWinID);
+                                                WindowFO toWindowVO = windowFOMapper.selectById(toWinID);
                                                 if (!toWindowVO.getIsFirst()
                                                         && !toWindowVO.getIsChild()
                                                         && new Long(2).equals(toWindowVO.getWinStatus())) { // 窗口状态为挂起
-                                                    if(isMD){
-                                                        if(new Long(50).equals(toWindowVO.getDeptID())){
+                                                    if (isMD) {
+                                                        if (new Long(50).equals(toWindowVO.getDeptID())) {
                                                             rightWindow = toWinID;
                                                             break;
                                                         }
-                                                    }else{
-                                                        if(new Long(52).equals(toWindowVO.getDeptID())){
+                                                    } else {
+                                                        if (new Long(52).equals(toWindowVO.getDeptID())) {
                                                             rightWindow = toWinID;
                                                             break;
                                                         }
@@ -2161,24 +2147,24 @@ public class NucleicAcidImpl implements NucleicAcid {
                                         }
                                     }
 
-                                    if(rightWindow == null){
-                                        itWindowLinkVOs = windowLinkFOs.iterator();
-                                        while (itWindowLinkVOs.hasNext()) {
-                                            WindowLinkFO windowLinkVO = (WindowLinkFO) itWindowLinkVOs.next();
-                                            if (!windowLinkVO.getIsDrip().booleanValue()) {
+                                    if (rightWindow == null) {
+
+                                        for (Object windowLinkFO : windowLinkFOs) {
+                                            WindowLinkFO windowLinkVO = (WindowLinkFO) windowLinkFO;
+                                            if (!windowLinkVO.getIsDrip()) {
                                                 Long toWinID = windowLinkVO.getToWinID();
 
-                                                WindowFO toWindowVO = getDao().getWindowFO(toWinID);
+                                                WindowFO toWindowVO = windowFOMapper.selectById(toWinID);
                                                 if (!toWindowVO.getIsFirst()
                                                         && !toWindowVO.getIsChild()
                                                         && new Long(3).equals(toWindowVO.getWinStatus())) { // 窗口状态为关闭
-                                                    if(isMD){
-                                                        if(new Long(50).equals(toWindowVO.getDeptID())){
+                                                    if (isMD) {
+                                                        if (new Long(50).equals(toWindowVO.getDeptID())) {
                                                             rightWindow = toWinID;
                                                             break;
                                                         }
-                                                    }else{
-                                                        if(new Long(52).equals(toWindowVO.getDeptID())){
+                                                    } else {
+                                                        if (new Long(52).equals(toWindowVO.getDeptID())) {
                                                             rightWindow = toWinID;
                                                             break;
                                                         }
@@ -2188,13 +2174,13 @@ public class NucleicAcidImpl implements NucleicAcid {
                                         }
                                     }
 
-                                    if(rightWindow == null){
-                                        rightWindow = new Long(-1);
+                                    if (rightWindow == null) {
+                                        rightWindow = (long) -1;
                                     }
 
-                                    if(isMD){
+                                    if (isMD) {
                                         MDwindow = rightWindow;
-                                    }else{
+                                    } else {
                                         MRwindow = rightWindow;
                                     }
                                 }
@@ -2202,21 +2188,21 @@ public class NucleicAcidImpl implements NucleicAcid {
                         }
                     }
 
-                    ErrorLogUtil.error(
+                    log.error(
                             Calendar.getInstance().getTime()
-                                    +"分配 窗口map： recipeid = " + recipeVO.getRecipeid()
-                                    + "， rightWindow = "+rightWindow
+                                    + "分配 窗口map： recipeid = " + recipeVO.getRecipeid()
+                                    + "， rightWindow = " + rightWindow
                     );
 
-                    if(rightWindow != null){
+                    if (rightWindow != null) {
                         ClMdqueueFO pharmacyQueueVO = new ClMdqueueFO();
-                        pharmacyQueueVO.setQueueid(null);
+                        pharmacyQueueVO.setQueueid(smOidGenerate("MA_CL_DATA_PHARMACYQUEUE"));
                         pharmacyQueueVO.setPatientid(recipeVO.getPatientid());
                         pharmacyQueueVO.setEncounterid(recipeVO.getEncounterid());
                         pharmacyQueueVO.setName(recipeVO.getName());
                         pharmacyQueueVO.setSex(recipeVO.getSex());
                         pharmacyQueueVO.setAge(recipeVO.getAge());
-                        pharmacyQueueVO.setRecipeid(recipeVO.getRecipeid() );
+                        pharmacyQueueVO.setRecipeid(recipeVO.getRecipeid());
                         pharmacyQueueVO.setDeptid(recipeVO.getDeptid());
                         pharmacyQueueVO.setDocid(recipeVO.getDocid());
                         pharmacyQueueVO.setRecipetime(recipeVO.getInputtime());
@@ -2227,24 +2213,22 @@ public class NucleicAcidImpl implements NucleicAcid {
                         pharmacyQueueVO.setIsincludedrip("1");
 
                         //是否非药品处方
-                        if(agentList.contains(recipeVO.getRecipeclass())){
+                        if (agentList.contains(recipeVO.getRecipeclass())) {
                             pharmacyQueueVO.setIsnotdrug("1");
-                        }else{
+                        } else {
                             pharmacyQueueVO.setIsnotdrug("0");
                         }
 
-                        pharmacyQueueVO.setQueuestatus(new Long(1));
+                        pharmacyQueueVO.setQueuestatus(1L);
                         pharmacyQueueVO.setWindowid(rightWindow);
                         pharmacyQueueVO.setChargeid(recipeVO.getChargeid());
-                        pharmacyQueueVO.setVersionid( currTime  );
+                        pharmacyQueueVO.setVersionid(currTime);
                         toCreate.add(pharmacyQueueVO);
                     }
                 }
 
                 if(toCreate.size() > 0){
-                    Iterator aIt = toCreate.iterator();
-                    while(aIt.hasNext()){
-                        ClMdqueueFO pharmacyQueueVO = (ClMdqueueFO) aIt.next();
+                    for (ClMdqueueFO pharmacyQueueVO : toCreate) {
                         retList.add(pharmacyQueueVO);
                     }
                 }
@@ -2258,9 +2242,9 @@ public class NucleicAcidImpl implements NucleicAcid {
         }
 
         if ( recipeMap.size() > 0 ) {
-            NeedDispense = new Boolean( true );
+            NeedDispense = Boolean.TRUE;
         }else {
-            NeedDispense = new Boolean( false ); //不需要分配药房
+            NeedDispense = Boolean.FALSE; //不需要分配药房
         }
 
         retMap.put("NeedDispense", NeedDispense) ;

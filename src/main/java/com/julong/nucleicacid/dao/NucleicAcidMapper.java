@@ -111,8 +111,18 @@ public interface NucleicAcidMapper {
      * @return
      */
     Long getNeedDispMed2(@Param("recipeId")Long cfid);
-    /*
+    /**
      * 取药口配药优先级
      * */
     String getDrugisPriortyPack(@Param("itemid")Long itemid);
+    /**
+     *  取非药品代发地点
+     * */
+    AgentFO getAgentFO(@Param("encounterType")Long encounterType, @Param("itemID")Long itemID);
+    /**
+     * 获取门诊候药队列 候药状态为 1、已接受 或 2、已打印 返回包含PharmacyQueueFO的List
+     *
+     * 按照queueTime排序
+     */
+    List<ClMdqueueFO> getPharmacyQueueFOs(@Param("winID")Long winID);
 }

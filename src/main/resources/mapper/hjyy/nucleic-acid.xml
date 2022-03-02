@@ -400,5 +400,13 @@
          select nvl( d.isprioritypack,'0') from ab_orderitem o , PH_DRUGITEM d
          where o.itemid = #{itemid} and o.drugitemid = d.drugid    and rownum &lt; 2
     </select>
+    <select id="getAgentFO" resultType="com.julong.nucleicacid.entity.AgentFO">
+        select  * from MA_AGENT  fo  where fo.itemID = #{itemID} and
+					fo.encounterType = #{encounterType}
+    </select>
+    <select id="getPharmacyQueueFOs" resultType="com.julong.nucleicacid.entity.ClMdqueueFO">
+        select * from MA_CL_DATA_PHARMACYQUEUE  fo  where fo.windowID = #{winID} and     (fo.queueStatus = 1 or   fo.queueStatus = 2) order by fo.queueTime
+
+    </select>
 
 </mapper>
