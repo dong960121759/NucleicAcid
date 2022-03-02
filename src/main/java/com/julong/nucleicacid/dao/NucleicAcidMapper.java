@@ -1,5 +1,6 @@
 package com.julong.nucleicacid.dao;
 
+import com.julong.nucleicacid.entity.RecentryItem;
 import com.julong.nucleicacid.entity.UnChrgRecipeBillFO;
 import com.julong.nucleicacid.entity.UnChrgRecipeFO;
 import com.julong.nucleicacid.model.*;
@@ -88,4 +89,6 @@ public interface NucleicAcidMapper {
      * @return
      */
     List<UnChrgRecipeBillFO> getRecipsbyRecIds(List<Long> recIds);
+
+    List<RecentryItem> getRecentry(@Param("oneRecNo")long oneRecNo);
 }

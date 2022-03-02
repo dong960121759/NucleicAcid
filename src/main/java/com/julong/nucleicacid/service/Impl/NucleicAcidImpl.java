@@ -22,6 +22,7 @@ import org.springframework.transaction.interceptor.TransactionAspectSupport;
 import org.springframework.transaction.support.DefaultTransactionDefinition;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -695,6 +696,7 @@ public class NucleicAcidImpl implements NucleicAcid {
             }
             String eachRecipesOne = sb.deleteCharAt(sb.length()-1).toString();
 
+            String hispaynoKey = getHisPayNo(eachRecipesOne);
 
             for (GetPaybillfeeOutSet getPaybillfeeOutSet: unChrgRecipeBillFO.getGetPaybillfeeOutSets()){
                 BigDecimal typeAmout = new BigDecimal(getPaybillfeeOutSet.getTypeAmout());
@@ -773,7 +775,8 @@ public class NucleicAcidImpl implements NucleicAcid {
 
         String orderId = payIn.getOrderId() ;
         String tradeNo = payIn.getTradeNo();
-        BigDecimal payAmout = payIn.getPayAmout() ;
+        BigDecimal payAmout = payIn.getPayAmout().divide(new BigDecimal(100), 2, RoundingMode.HALF_UP) ;
+        BigDecimal recPayAmout =payIn.getRecPayAmout().divide(new BigDecimal(100), 2, RoundingMode.HALF_UP);
         String payMode = payIn.getPayMode() ;
         if(orderId == null || "".equals(orderId.trim()) ) {
             payOut.setResultCode(KingDeeCodeInfo.FAILED);
@@ -798,98 +801,96 @@ public class NucleicAcidImpl implements NucleicAcid {
                 return payOut;
             }
 
-//            try{
-//                Map tMap = null ;
-//
-//                tMap = Hjyy_mzCharge(hisPayNo , payMode , amt , null , null , inBody ) ;
-//
-//                if(tMap != null){
-//                    String errorMessage = (String) tMap.get("errorMessage") ;
-//                    if(errorMessage != null){
-//                        payOut.setResultCode(KingDeeCodeInfo.SUCCESS);
-//                        payOut.setResultDesc(errorMessage) ;
-//                    }else{
-//
-//                        List<Long> chrgNoList = (List) tMap.get("chrgNo") ;
-//                        List<String> invoiceNoList = (List) tMap.get("invoiceNo") ;
-//
-//                        String name   = (String)tMap.get("name") ;
-//                        String cardno   = (String)tMap.get("cardno") ;
-//                        String phone   = (String)tMap.get("phone") ;
-//
-//                        //20180628 增加导引信息
-//                        List<String> guideList = (List) tMap.get("guideInfo") ;
-//
-//                        if(chrgNoList != null && chrgNoList.size() > 0 ){
-//
-//                            String chrgNo = "" , invoiceNo = "",guideinfo = "" ;
-//
-//                            if(guideList != null && guideList.size() > 0){
-//                                for(String eachGuide : guideList){
-//                                    if(guideinfo.length() == 0){
-//                                        guideinfo = eachGuide ;
-//                                    }else{
-//                                        guideinfo = guideinfo + "；" + eachGuide ;
-//                                    }
-//                                }
-////								guideinfo = guideinfo +"。[如果需要退费请先到收费处专窗补打发票]。";
-////								guideinfo += "[温馨提示：请在取药、检验、检查时向医务人员出示带有条码的支付详情页面]。";
-//                            }
-//
-//                            for(Long t_chrgNo : chrgNoList){
-//                                if(chrgNo.length() == 0){
-//                                    chrgNo = t_chrgNo.toString() ;
-//                                }else{
-//                                    chrgNo = chrgNo + "," + t_chrgNo.toString() ;
-//                                }
-//                            }
-//
-//                            if(invoiceNoList != null && invoiceNoList.size() > 0){
-//                                for(String t_invoiceNo : invoiceNoList){
-//                                    if(invoiceNo.length() == 0){
-//                                        invoiceNo = t_invoiceNo ;
-//                                    }else{
-//                                        invoiceNo = invoiceNo + "," + t_invoiceNo ;
-//                                    }
-//                                }
-//                            }
-//                            outBody.setName(name);
-//                            outBody.setCardno(cardno);
-//                            outBody.setPhone(phone);
-//                            outBody.setChrgno(chrgNo) ;
-//                            outBody.setInvoiceno(invoiceNo) ;
-//
-//                            String guide = ""; //整合，结算号和各结算的导引
-//                            guide = "序列号：" + chrgNoList.toString(); //结算号列表
-//                            guideinfo += "。[如果需要退费请先到收费处专窗补打发票]。"; //各结算号的导引导累加
-//                            guideinfo += "[温馨提示：请在取药、检验、检查时向医务人员出示带有条码的支付详情页面]。";
-//                            guide = guide + guideinfo ;
-//
-//                            payOut.setGuideinfo( guide  ) ;
-//
-//                            //No assign values
-////							String infoMessage = (String) tMap.get("infoMessage") ;
-////							if(infoMessage != null && !("".equals(infoMessage.trim())) ){
-////								outBody.setGuideinfo("结算号：" + chrgNoList.toString() + "；" + infoMessage) ;
-////							}
-//
-//                            payOut.setResultCode(KingDeeCodeInfo.SUCCESS);
-//                            payOut.setResultDesc( "成功! " ) ;
-//
-//                            returnFO.setBody(outBody) ;
-//                        }
-//                    }
-//                }else {
-//                    payOut.setResultCode(KingDeeCodeInfo.FAILED);
-//                    payOut.setResultDesc( "mzCharge错误! " ) ;
-//                }
-//            } catch (Exception e) {
-//                e.printStackTrace();
-//                TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
-//                payOut.setResultCode(KingDeeCodeInfo.FAILED);
-//                payOut.setResultDesc("门诊结算出错!" + e.getMessage()) ;
-//
-//            }
+            try{
+                Map tMap = null ;
+
+                tMap = Hjyy_mzCharge( payMode , payAmout , recPayAmout , null , payIn ) ;
+
+                if(tMap != null){
+                    String errorMessage = (String) tMap.get("errorMessage") ;
+                    if(errorMessage != null){
+                        payOut.setResultCode(KingDeeCodeInfo.SUCCESS);
+                        payOut.setResultDesc(errorMessage) ;
+                    }else{
+
+                        List<Long> chrgNoList = (List) tMap.get("chrgNo") ;
+                        List<String> invoiceNoList = (List) tMap.get("invoiceNo") ;
+
+                        String name   = (String)tMap.get("name") ;
+                        String cardno   = (String)tMap.get("cardno") ;
+                        String phone   = (String)tMap.get("phone") ;
+
+                        //20180628 增加导引信息
+                        List<String> guideList = (List) tMap.get("guideInfo") ;
+
+                        if(chrgNoList != null && chrgNoList.size() > 0 ){
+
+                            String chrgNo = "" , invoiceNo = "",guideinfo = "" ;
+
+                            if(guideList != null && guideList.size() > 0){
+                                for(String eachGuide : guideList){
+                                    if(guideinfo.length() == 0){
+                                        guideinfo = eachGuide ;
+                                    }else{
+                                        guideinfo = guideinfo + "；" + eachGuide ;
+                                    }
+                                }
+//								guideinfo = guideinfo +"。[如果需要退费请先到收费处专窗补打发票]。";
+//								guideinfo += "[温馨提示：请在取药、检验、检查时向医务人员出示带有条码的支付详情页面]。";
+                            }
+
+                            for(Long t_chrgNo : chrgNoList){
+                                if(chrgNo.length() == 0){
+                                    chrgNo = t_chrgNo.toString() ;
+                                }else{
+                                    chrgNo = chrgNo + "," + t_chrgNo.toString() ;
+                                }
+                            }
+
+                            if(invoiceNoList != null && invoiceNoList.size() > 0){
+                                for(String t_invoiceNo : invoiceNoList){
+                                    if(invoiceNo.length() == 0){
+                                        invoiceNo = t_invoiceNo ;
+                                    }else{
+                                        invoiceNo = invoiceNo + "," + t_invoiceNo ;
+                                    }
+                                }
+                            }
+
+                            payOut.setOrderIdHIS(chrgNo) ;
+                            payOut.setReceiptId(invoiceNo); ;
+
+                            String guide = ""; //整合，结算号和各结算的导引
+                            guide = "序列号：" + chrgNoList.toString(); //结算号列表
+                            guideinfo += "。[如果需要退费请先到收费处专窗补打发票]。"; //各结算号的导引导累加
+                            guideinfo += "[温馨提示：请在取药、检验、检查时向医务人员出示带有条码的支付详情页面]。";
+                            guide = guide + guideinfo ;
+
+                            payOut.setGuideInfo( guide  ); ;
+
+                            //No assign values
+//							String infoMessage = (String) tMap.get("infoMessage") ;
+//							if(infoMessage != null && !("".equals(infoMessage.trim())) ){
+//								outBody.setGuideinfo("结算号：" + chrgNoList.toString() + "；" + infoMessage) ;
+//							}
+
+                            payOut.setResultCode(KingDeeCodeInfo.SUCCESS);
+                            payOut.setResultDesc( "成功! " ) ;
+
+
+                        }
+                    }
+                }else {
+                    payOut.setResultCode(KingDeeCodeInfo.FAILED);
+                    payOut.setResultDesc( "mzCharge错误! " ) ;
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+                TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
+                payOut.setResultCode(KingDeeCodeInfo.FAILED);
+                payOut.setResultDesc("门诊结算出错!" + e.getMessage()) ;
+
+            }
 
         return payOut;
     }
@@ -940,5 +941,744 @@ public class NucleicAcidImpl implements NucleicAcid {
                 hispaynoKey = oldKey;
             }
             return hispaynoKey;
+    }
+    /**
+     *<pre>
+     * 黄江医院 门诊结算
+     * 需求：每个医生打张发票。
+     *
+     * @param payIn	处方号列表
+     * @param payMode	支付方式
+     * @param totalPayMoney 支付总金额
+     * @param medicalPayMoney 医保支付金额
+     * @param preChargeMoney 预交金 支付
+     * @return
+     * Map
+     * chrgNo 结算号
+     * errorMessage 出错信息
+     * infoMessage 指引信息
+     * recipeItemList 返回的处方明细,List<RecipeItem>
+     * </pre>
+     */
+    private Map Hjyy_mzCharge(String payMode,BigDecimal totalPayMoney,BigDecimal medicalPayMoney,BigDecimal preChargeMoney,PayIn payIn ){
+
+        Map returnMap = new HashMap<>() ;
+
+        if(totalPayMoney == null) totalPayMoney = new BigDecimal("0") ;
+        if(medicalPayMoney == null) medicalPayMoney = new BigDecimal("0") ;
+        if(preChargeMoney == null) preChargeMoney = new BigDecimal("0") ;
+
+
+        Long pid = null ;
+        List<Long> chrgNoList   = null ;	//N个 结算号
+        List<String> fpNoList   = null ;  //N个发票号
+        List<String> guideList  = null ;  //N个导引信息
+        Object name = null , cardno = null , phone = null;
+
+        Calendar cal = Calendar.getInstance();// 取当前日期。
+        String infoMessage = "" ;		//返回指引提示信息
+
+        Map<String , Map> recClassToWin_map = new HashMap<String , Map>() ; 	//记录已分配过的处方类型
+        Map<String , String> execLocationMap = new HashMap<String , String >() ;	//记录处方执行地点
+
+        //根据hispayno 得到 recno
+        //MOBILEPAY_HISPAYNO( hispayno,recno )
+        //hisPayNo：123,235,456  > 数组 rec[0] = 123,rec[1] = 235,rec[2]=456
+
+        List<String> recNoList = new ArrayList<String>() ; //处方号的列表，生成FO时要用
+        String recByPayno = payIn.getPrescriptionIds();
+        String  hisPayNo = getHisPayNo(recByPayno);
+
+
+        String[] allRec = recByPayno.split(",") ;//全部的此次结算的处方串，包括N个医生的
+
+        BigDecimal totalMoney = new BigDecimal("0") ;
+
+        //Verfiy begin
+        for(String oneRecNo : allRec){
+            if(oneRecNo != null && !"".equals(oneRecNo.trim())){
+
+                List<RecentryItem>  cfmx = nucleicAcidMapper.getRecentry( Long.parseLong(oneRecNo)) ;
+
+                if (cfmx.size() > 0 ) {
+                    RecentryItem obj = cfmx.get(0) ;
+                    if (    "1".equals( obj.getIsCharge() )
+                            || "1".equals( obj.getIsDelete() )
+                    )
+                    {
+                        returnMap.put("errorMessage", "支付单: " + hisPayNo + " 已经无效!") ;
+                        return returnMap ;
+                    }
+
+                    //此处方号的明细汇总金额
+                    totalMoney = totalMoney.add( obj.getAmountAll( ) ) ;
+                    pid = obj.getPatientID();
+
+                }else {
+                    returnMap.put("errorMessage", "处方: " + oneRecNo + " 无明细内容!") ;
+                    return returnMap ;
+                }
+
+                recNoList.add(oneRecNo) ;
+            }
+        }
+
+        if(recNoList.isEmpty()){
+            returnMap.put("errorMessage", "支付单: " + hisPayNo + " 没有记录处方号!") ;
+            return returnMap ;
+        }
+
+        totalPayMoney = totalPayMoney.setScale(2, BigDecimal.ROUND_HALF_UP) ; //传入的总金额
+        totalMoney = totalMoney.setScale(2, BigDecimal.ROUND_HALF_UP) ; //全部处方明细的总金额
+        if(Math.abs (totalPayMoney.floatValue() - totalMoney.floatValue()) >= 0.01 ){
+            returnMap.put("errorMessage", "支付金额与处方金额不一致，不能结算！处方金额="+totalMoney+" 支付金额 = "+totalPayMoney) ;
+            return returnMap ;
+        }
+
+        //Verify End
+
+        try {
+            //取系统设置支付代码 defaultWxPayID
+            Long payCode = null ;
+            payCode = _defaultWxPayID ;
+
+            //if(NYDictInfo.PAYMODE_3.equals(payMode)){
+            //equalsIgnoreCase
+            if(NYDictInfo.PAYMODE_3.equals(payMode)){
+                payCode = _defaultWxPayID ;
+            }else if(NYDictInfo.PAYMODE_4.equals(payMode)){
+                payCode = _defaultZfbPayID ;
+            }else if(NYDictInfo.PAYMODE_DGNSH.equals(payMode)){
+                payCode = _defaultDgNshPayID ;
+            }else{
+                returnMap.put("errorMessage", "平台支付方式不正确2！") ;
+                return returnMap ;
+            }
+            //校验支付代码
+            if(payCode == null  ){
+                returnMap.put("errorMessage", "微信或支付宝的支付代码 设置  错误 !") ;
+                return returnMap ;
+            }
+
+            //取默认结算人代码和校验
+            Long operCode = _defaultWxUserID;
+            if(operCode == null  ){
+                returnMap.put("errorMessage", "微信操作员代码设置错误 !") ;
+                return returnMap ;
+            }
+
+            String preStock ;//计价库存预发
+            String manageStock ; //是否启用库存管理0不启用、1启用不限制、2启用限制录入
+
+            preStock = _preStock ;
+            manageStock = _manageStock ;
+            //// end 取系统设置
+
+            //取病人信息
+            PatientinfoFO  patientinfoFO  = getDao().getPatinfoByPid(pid) ;
+            if(patientinfoFO == null){
+                returnMap.put("errorMessage", "取病人信息失败！") ;
+                return returnMap ;
+            }
+
+
+            // ------ 按Encounterid分单结算  ------
+			/*
+			 * 各医生的分开：源串为：zs001 , zs002 ,ls001 , ls002
+			 * 张三1号方，张三2号方，李四1号方，李四2号方
+			 * 分成2个数组 ： (zs001,zs002) (ls001, ls002)
+			 * 此单结算2次
+			 *
+			   hispayno > String[0] = ls001,ls002
+			   String[1]= zs001,zs002
+			 * */
+
+            chrgNoList = new ArrayList<Long>();
+            fpNoList   = new ArrayList<String>();
+            guideList   = new ArrayList<String>();
+
+            name = patientinfoFO.getName();
+            cardno = patientinfoFO.getHcno();
+            phone = patientinfoFO.getMobile();
+
+
+            List<String> allDrRecs = getDao().getRecipsbyEncounterID(recNoList) ;
+            //Source data : ecNoList  = ls001, ls002 , zs001, zs002
+            //Target data : allDrRecs[0] = ls001,ls002 ;  allDrRecs[1] = zs001,zs002
+
+            for(String oneDrRecs : allDrRecs){ //医生处方串的集合,结算次数
+
+                Long chrgNo = null ;	//1次的结算号
+                String fpNo = null ;  	//1次发票号
+                Long fpID = null  ; //1次发票ID
+                String eachGuide = ""; //1次结算的指引导
+
+                //每个医生的处方串生成列表
+                String[] rec1 =  oneDrRecs.split(",") ;
+                //loop 1: oneDrRecs = ls001, ls002 > rec[0] = ls001 , rec[1] = ls002
+                //loop 2: oneDrRecs = zs001 , zs002 > rec[0]=zs001 , rec[1] = zs002
+
+                List<String> oneDrRecsList = new ArrayList<String>() ; //1个医生的处方串
+
+                for(String recNo1 : rec1){ //1个医生处方串转化成LIST
+                    oneDrRecsList.add(recNo1); //数组到 LIST
+                }
+
+                //1个医生处方列表生成 处方头FO的LIST
+                List<ClRecipeFO> oneDrRecipeFOs = getDao().getClRecipeFOs(oneDrRecsList) ;
+                //1个医生处方列表生成 处方明细 FO 的LIST
+                List<ClRecentryFO> oneDrRecentryFOs = getDao().getClRecentryFOs(oneDrRecsList) ;
+
+                //此次结算的1个医生的全部处方金额
+                BigDecimal oneTotalMoney = new BigDecimal("0") ;
+                for(ClRecentryFO recentryFO : oneDrRecentryFOs){
+                    BigDecimal total = recentryFO.getAmount()  ;
+                    if(total == null ) total = new BigDecimal("0") ;
+
+                    oneTotalMoney = oneTotalMoney.add(total) ;
+                }
+
+                //算费
+                Map tMap = getDao().mzCalculate(oneDrRecsList); //因为此处入参：是LIST，其中些的转换
+                if(tMap == null){
+                    returnMap.put("errorMessage", "算费出错！") ;
+                    return returnMap ;
+                }
+
+                List<ClChrgentryFO> clChrgentryFOs = (List) tMap.get("ClChrgentryFOs") ;
+                List<ClInvoentryFO> clInvoentryFOs = (List) tMap.get("ClInvoentryFOs") ;
+
+                ClChargeFO clChargeFO = new ClChargeFO() ;
+                clChargeFO.setPayorid( patientinfoFO.getPayorid()) ;
+                clChargeFO.setPlanid( patientinfoFO.getPlanid()) ;
+                clChargeFO.setMcno( patientinfoFO.getMcno()) ;
+                clChargeFO.setSino(patientinfoFO.getSino()) ;
+                clChargeFO.setChargeoper(_defaultWxUserID) ;
+                clChargeFO.setChargetime(cal.getTime() ) ;
+                clChargeFO.setTotalsum( oneTotalMoney ) ;
+                clChargeFO.setSpsum( oneTotalMoney ) ;
+                clChargeFO.setHcno( patientinfoFO.getHcno() ) ;
+
+                chrgNo = getDao().createClChargeFO(clChargeFO);	//保存：结算表
+
+                for(ClChrgentryFO clChrgentryFO : clChrgentryFOs ){
+                    clChrgentryFO.setChargeid( chrgNo ) ;
+                }
+                getDao().createFOs(clChrgentryFOs);	////保存：结算分类表
+
+                ClPaymentFO clPaymentFO = new ClPaymentFO() ;
+                clPaymentFO.setChargeid(chrgNo) ;
+                clPaymentFO.setPaymentid(payCode) ;
+                clPaymentFO.setPaysum( oneTotalMoney ) ;
+
+                getDao().createFO(clPaymentFO);	////保存：支付表
+
+                ClInvoiceFO clInvoiceFO = new ClInvoiceFO() ;
+                fpNo = "wx" + chrgNo ;
+                clInvoiceFO.setInvoiceno(fpNo) ;
+                clInvoiceFO.setChargeid(chrgNo) ;
+                clInvoiceFO.setChargetime( cal.getTime()) ;
+                clInvoiceFO.setInvoicetime(cal.getTime() ) ;
+                clInvoiceFO.setName( patientinfoFO.getName() ) ;
+                clInvoiceFO.setPayorid(patientinfoFO.getPayorid()) ;
+                clInvoiceFO.setPlanid( patientinfoFO.getPlanid() ) ;
+                clInvoiceFO.setChargeoper(_defaultWxUserID) ;
+                clInvoiceFO.setSpsum(oneTotalMoney ) ;
+                clInvoiceFO.setAcctsum( new BigDecimal(0));
+                clInvoiceFO.setSbsum(   new BigDecimal(0) );
+
+                fpID = getDao().createClInvoiceFO(clInvoiceFO);	//保存 :发票表
+
+                for(ClInvoentryFO clInvoentryFO : clInvoentryFOs ){
+                    clInvoentryFO.setInvoiceid( fpID ) ;
+                }
+
+                getDao().createFOs(clInvoentryFOs);	//保存 ：发票明细表
+
+                Boolean isasrec = false;
+
+                //导诊提示的处理
+                for(ClRecipeFO oneRecipeFO : oneDrRecipeFOs){
+
+                    Long cfcataid = null;
+                    Long deptID = null;
+                    Long mdwin = null;
+                    Long cfh = null;
+                    Long cflx = null ; //处方类型
+
+                    cfcataid = oneRecipeFO.getCataid() ;
+                    deptID = oneRecipeFO.getDeptid() ;
+                    cfh = oneRecipeFO.getRecipeid() ;
+
+                    //处理指引导信息 begin
+                    List<RecentryItem> recentryLists = new ArrayList<RecentryItem>();
+
+                    recentryLists = getDao().getRecentry( new BigDecimal(cfh) ) ;
+
+                    //判断是否检验处方，若是需要处理申请单数据
+                    if(recentryLists != null && recentryLists.size() > 0){
+                        Iterator entryIt = recentryLists.iterator();
+                        while(entryIt.hasNext()){
+                            RecentryItem entryItem = (RecentryItem) entryIt.next();
+                            cflx = entryItem.getEntryType() ;
+
+                            //此批处方中若有一个检验时，就需要做申请明细表
+                            if ( cflx.equals(new Long("7") ) )  {
+                                isasrec = true;
+                            }
+                            ////
+                        }
+                    }
+
+//						20200305 commented begin
+                    //西药，成药
+//						if( new Long(1).equals( cfcataid)|| new Long(2).equals(cfcataid ) ) {
+//
+//								if(recentryLists != null && recentryLists.size() > 0){
+//									Iterator entryIt = recentryLists.iterator();
+//									while(entryIt.hasNext()){
+//										RecentryItem entryItem = (RecentryItem) entryIt.next();
+//										Long executeDept = entryItem.getExecuteDept();
+//										if(new Long(52).equals(executeDept)){
+//											if(!guideList.contains(_noteXY)){
+//												guideList.add(_noteXY);
+//											}
+//										}
+//										if(new Long(50).equals(executeDept)){
+//											if(!guideList.contains(_noteZY)){
+//												guideList.add(_noteZY);
+//											}
+//										}
+//									}
+//								}
+//							}
+
+//						if( new Long(3).equals( cfcataid ) || new Long(11).equals( cfcataid )  ){
+//							if(!guideList.contains(_noteZY)){
+//								guideList.add(_noteZY);
+//							}
+//						}
+
+//						if(new Long(6).equals(cfcataid )){
+//							String ksmc = null;
+//							ksmc = getDao().getOmDepartmentFO( deptID ).getDeptname( ) ;
+//							_noteZL = _noteZL.replace("dept", ksmc ) ;
+//							if(!guideList.contains(_noteZL)){
+//								guideList.add(_noteZL);
+//							}
+//						}
+
+                    //20200305 commented end
+
+                    if(new Long(5).equals(cfcataid)){
+                        if(!guideList.contains(_noteJY)){
+                            guideList.add(_noteJY);
+                        }
+                    }
+                    if(new Long(4).equals( cfcataid )){
+                        if(recentryLists != null && recentryLists.size() > 0){
+                            Iterator entryIt = recentryLists.iterator();
+                            while(entryIt.hasNext()){
+                                RecentryItem recipeEntryVO = (RecentryItem) entryIt.next();
+                                Long executeDept = recipeEntryVO.getExecuteDept();
+                                if(new Long(45).equals(executeDept)){
+                                    if(!guideList.contains(_noteBC)){
+                                        guideList.add(_noteBC);
+                                    }
+                                }
+                                if(new Long(41).equals(executeDept)){
+                                    if(!guideList.contains(_noteFS)){
+                                        guideList.add(_noteFS);
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    //处理指引导信息 end
+
+                }
+
+                //20180701-begin
+                // 保存检验中间表,直接传入rec list , 用SQL构造好结构，直接存
+
+                if (isasrec.equals(new Boolean(true))) {
+                    List <lisRequestFO> asfos = new ArrayList<lisRequestFO>();
+                    asfos = getDao().getLisRequest( oneDrRecsList , chrgNo ) ;
+
+                    if ( asfos!=null && asfos.size() > 0 ) {
+                        getDao().createFOs(asfos) ;
+                    }else {
+                        returnMap.put("errorMessage", "保存检验中间表错误！") ;
+                        return returnMap ;
+                    }
+
+                }
+                //20180701- end
+                //更新挂号信息
+                for(ClRecipeFO recipeFO : oneDrRecipeFOs){
+                    getDao().updateClRegisterInfo(recipeFO.getEncounterid().toString()) ;
+                }
+
+                //保存移动支付记录表
+                HcMobilePaymentFO hcMobilePaymentFO = new HcMobilePaymentFO() ;
+                hcMobilePaymentFO.setChrgNo(chrgNo.toString()) ;
+                hcMobilePaymentFO.setType("1") ;
+                hcMobilePaymentFO.setPatCardType(inParameter.getCardType());
+                hcMobilePaymentFO.setPatCardNo(inParameter.getCardNo());
+                hcMobilePaymentFO.setHisOrdNum(inParameter.getHisPayNo());
+                hcMobilePaymentFO.setPsOrdNum(inParameter.getWebPayNo());
+                hcMobilePaymentFO.setAgtOrdNum(inParameter.getWebPayNo());
+                hcMobilePaymentFO.setPayMode(inParameter.getPayMethod());
+//							hcMobilePaymentFO.setPayAmt(inParameter.getPayAmt());
+
+                hcMobilePaymentFO.setPayTime(_formatDateTime_wx.format(cal.getTime()));
+
+                hcMobilePaymentFO.setName(patientinfoFO.getName()) ;
+                hcMobilePaymentFO.setPayAmt(oneTotalMoney) ;
+                hcMobilePaymentFO.setRecPayAmt( oneTotalMoney ) ;
+
+                hcMobilePaymentFO.setInvoiceNo(fpNo);
+
+                //20180628 Save GuideInfo
+                if(guideList != null && guideList.size() > 0){
+
+                    for(String guide : guideList){
+                        if(eachGuide.length() == 0){
+                            eachGuide = guide ;
+                        }else{
+                            eachGuide = eachGuide + "；" + guide ;
+                        }
+                    }
+                    eachGuide = eachGuide +"。";
+                }
+
+                hcMobilePaymentFO.setNote(eachGuide);
+
+                getDao().createFO(hcMobilePaymentFO); //保存hc_MobilePayment
+
+                //修改处方结算标志
+                for(ClRecipeFO recipeFO : oneDrRecipeFOs){
+
+                    recipeFO.setIscharge("1");
+                    recipeFO.setChargeid( chrgNo ) ;
+                    recipeFO.setChargeoper( _defaultWxUserID) ;
+                    recipeFO.setChargetime( cal.getTime() );
+                    recipeFO.setVersionid( cal.getTime() ); //20181215
+                }
+                getDao().updateFOs(oneDrRecipeFOs);	//保存cl_recipe
+
+                //20181112 begin
+                //检查申请表的处理 复用HIS的算法
+                for(ClRecipeFO recipeFO : oneDrRecipeFOs){
+
+                    Long bookID = recipeFO.getRequisitionid() ;
+
+//								if ( bookID == null ) continue;
+                    if ( bookID != null ) {
+                        if (  bookID < 0 ) { //病理申请单处理
+
+
+                            PhysioTherapyReqFO pfo = null;
+
+                            Long reqID = Long.valueOf( -bookID.intValue() );
+                            pfo = getDao().getPhysioTherapyReqFOByReqID(  reqID  ) ;
+                            if (pfo !=null ) {
+                                pfo.setIscharge( "1" );
+                                getDao().updateFO( pfo ) ; //EX_DATA_PHYSIOTHERAPYREQ
+                            }
+
+
+                        }else { //其他申请单
+
+                            boolean isException = false;
+
+                            //recipe.requestid > appointreq.oid
+                            //22的设备直接关联 处方表申请记录
+                            //22无预约，直接申请
+                            AppointmentReqFO reqVO = getDao().getAppointmentReqFOByReqID(bookID);
+                            if(reqVO != null){
+
+                                if(new Long(22).equals(reqVO.getDevicetype())){
+                                    isException = true;
+                                    Long bookStatus = reqVO.getBookstatus();
+                                    if(new Long(1).equals(bookStatus)){
+
+                                        reqVO.setBookstatus(new Long(6));
+                                        getDao().updateFO( reqVO ) ; //AppointmentReqFO
+                                    }
+                                }
+                            }
+
+                            if(!isException){
+                                //recipe.requestid > appoint.bookid
+                                //先预约，再申请
+                                AppointmentFO fo = getDao().getAppointmentFOByReqID( bookID);
+
+                                if(fo != null){
+
+                                    fo.setBookstatus(new Long(6));
+
+                                    getDao().updateFO( fo ) ; //AppointmentFO
+                                    //Pacs接口
+                                    Long pacsItemID = fo.getPacsitemid();
+                                    Long encounterID = fo.getEncounterid();
+
+                                    if(pacsItemID != null){
+                                        //getPacsServiceLocal().pacsChargeRecipes(fo);
+                                        Long bbid = null;
+                                        bbid = fo.getRequisitionid() ;
+                                        //appoint.requestid > appointreq.oid
+                                        AppointmentReqFO reqPacs = getDao().getAppointmentReqFOByReqID(bbid);
+                                        if( reqPacs != null ) {
+                                            Long bookStatus = reqPacs.getBookstatus();
+
+                                            if(new Long(1).equals(bookStatus)){
+
+                                                reqPacs.setBookstatus( new Long(6));
+                                                getDao().updateFO( reqPacs ) ; //AppointmentReqFO
+                                            }
+
+
+                                        }
+                                    }
+                                    //Pacs接口
+                                }
+                            }
+
+                        }
+                    }
+
+                }
+							/*
+							 *
+			if(vo != null){
+				Long requisitionID = vo.getRequisitionID();
+				if(requisitionID != null){
+					AppointmentReqVO reqVO = getAppointmentServiceLocal().getAppointmentReqVO(requisitionID);
+					if(reqVO != null){
+						Long bookStatus = reqVO.getBookStatus();
+						if(new Long(SYDictConstants.DICT95_1).equals(bookStatus)){
+							reqVO.setBookStatus(new Long(SYDictConstants.DICT95_6));
+							getAppointmentServiceLocal().updateAppointmentReq(reqVO);
+						}
+					}
+					getAppointmentServiceLocal().remove();
+				}
+			}
+
+							 * */
+
+                //20181112 end
+
+
+                //修改his支付单据表记录状态
+                MobilePayHisPayNoFO hispayFO = null;
+                hispayFO = getDao().getHisPayNoByID(hisPayNo);
+                hispayFO.setSite(  chrgNo.toString()   );
+                hispayFO.setIsChrg("1") ;
+                getDao().updateFO(hispayFO) ;
+
+                chrgNoList.add(chrgNo) ;
+                fpNoList.add(fpNo) ;
+
+                //20180911 - begin
+                //分配药口窗口
+                List mdqueues = new ArrayList() ;
+                List mdrecs  = new ArrayList() ;
+                Long cfdeptid = null;
+                Long ii = null;
+                Long cfid = null ;
+
+                for(ClRecipeFO recipeFO : oneDrRecipeFOs){
+                    cfid = recipeFO.getRecipeid( ) ;
+                    ii = new Long(-1) ;
+                    cfdeptid = recipeFO.getDeptid() ;
+
+                    //20181122 begin
+                    //itemsource
+                    try {
+                        ii = getDao().getNeedDispMed1(cfid  ) ;
+                    }catch(Exception e) {
+                        returnMap.put("errorMessage", "getNeedDispMed1 error"  ) ;
+                    }
+
+
+                    ErrorLogUtil.error(
+                            Calendar.getInstance().getTime()
+                                    + " getNeedDispMed1 cfh = "+ cfid
+                                    +"，ii1 = ： " +  ii
+
+                    ) ;
+
+                    if ( ii != null && ii > 0 ) {
+                        //case 1 :
+                        //有非加收的药品，要分窗口
+                    }else {
+                        ii = new Long(-1) ;
+                        //ma_agent
+                        try {
+                            ii = getDao().getNeedDispMed2(cfid  ) ;
+                        }catch(Exception e) {
+                            returnMap.put("errorMessage", "getNeedDispMed2 error"  ) ;
+                        }
+
+                        ErrorLogUtil.error(
+                                Calendar.getInstance().getTime()
+                                        + " getNeedDispMed2 cfh = "+ cfid
+                                        +"，ii2 = ： " +  ii
+
+                        ) ;
+
+                        if ( ii!=null && ii > 0 ) {
+                            //有ma_agent，要分窗口
+                        }else {
+                            //不分配口
+                            continue ;
+                        }
+
+                    }
+
+                    //20181122 end
+
+                    Map itMap = new HashMap() ;
+
+                    //处方头
+                    itMap.put("recipe" , recipeFO);
+
+                    //处方明细
+                    ClRecentryFO aa = null;
+                    aa = getDao().getRecentryFO(recipeFO.getRecipeid( ) );
+                    List entryList = new ArrayList();
+                    entryList.add(aa) ;
+
+                    itMap.put("entrys" , entryList);
+
+                    mdrecs.add(itMap) ; //做入参
+                }
+
+                //mdrecs.size() //要校验是否相同
+                //不同也报错
+
+                //根据算法来取收费窗口 ，普诊或急诊
+                Long win = null ;
+                boolean lb = true;
+                //verify time then set lb value
+
+                if ( lb ) {
+                    win = _defaultChargeWin ;
+                }else {
+                    win = _defaultChargeWinJZ ;
+                }
+                if (  cfdeptid != null && new Long(114).equals(cfdeptid)  ) {
+                    win = new Long( 41 ) ; //41	 	镇区收费窗口1
+                }
+
+                if (  cfdeptid != null && new Long(204).equals(cfdeptid)  ) {
+                    win = new Long( 56 ) ;
+                    //20210913 发热门诊处方以发热收费窗来处理
+                }
+
+//							//way1:
+//							mdqueues = allocateRecipes( mdrecs ,   win ) ; //返回LIST
+//							if ( mdqueues.size() > 0 ) {
+//								getDao().createFOs( mdqueues ) ;
+//							}
+
+                //20181122 再校验 若该 分配窗口，却未分时，报错
+                //该分
+                //way2:返回MAP， begin
+                try {
+                    Map retMap = allocateRecipes2Map( mdrecs ,   win ) ;
+                    if( retMap != null ) {
+
+                        Boolean needDispense = (Boolean) retMap.get("NeedDispense");
+                        mdqueues = (List) retMap.get("mdQueue");
+
+                        ErrorLogUtil.error(
+                                Calendar.getInstance().getTime()
+                                        + " 结算： hisPayNo = "+hisPayNo
+                                        +"，chargeWin = " +win
+                                        +"，needDispense = " + needDispense
+                                        +"，产生的发药队列数： " +  mdqueues.size()
+                                        +"，要分配的处方数：" + mdrecs.size()
+                        ) ;
+
+                        //若需要分配窗口，但是没有产生队列时报错
+                        if ( needDispense ) {
+                            if ( mdqueues.size() > 0 ) {
+                                //
+                                if ( mdqueues.size() != mdrecs.size() ) {
+                                    returnMap.put("errorMessage", "队列数不正确  ！要分的处方数：" + mdrecs.size()
+                                            + " , 分配的队列数 ="+ mdqueues.size() ) ;
+                                    return returnMap ;
+
+                                }
+                                //
+                                getDao().createFOs( mdqueues ) ;
+                            }else {
+                                returnMap.put("errorMessage", "没有产生候药队列 ！") ;
+                                return returnMap ;
+                            }
+                        }
+                    }else {
+                        if ( mdrecs.size() > 0 ) {
+                            returnMap.put("errorMessage", "需要分配 窗口，但allocateRecipes2Map返回空。");
+                            return returnMap ;
+                        }
+
+                    }
+
+                }catch(Exception e) {
+                    returnMap.put("errorMessage", "分配窗口方法出错！！") ;
+                    //return returnMap ;
+                }finally {
+//								if ( mdrecs.size() > 0 ) {
+//
+//								}
+                }
+
+                //way2 end
+
+
+
+                //20180911 - end
+
+            }
+            // ------ end 按处方分单结算  ------
+
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
+
+            chrgNoList = null ;
+            returnMap.put("errorMessage", e.getMessage()) ;
+
+        }finally {
+
+            if(returnMap.containsKey("errorMessage")){		//任何一次结算发生出错时，全部回滚
+                TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
+            }
+        }
+
+        //完成返回结算号
+        if(chrgNoList != null){
+            returnMap.put("chrgNo", chrgNoList) ;
+            returnMap.put("invoiceNo", fpNoList) ;
+            returnMap.put("guideInfo", guideList) ;
+
+            returnMap.put("name", name ) ;
+            returnMap.put("cardno", cardno) ;
+            returnMap.put("phone", phone) ;
+
+        }
+
+        //返回指引信息
+        if(infoMessage != null && !("".equals(infoMessage.trim())) ){
+            returnMap.put("infoMessage", infoMessage ) ;
+        }
+
+        return returnMap ;
     }
 }

@@ -217,5 +217,24 @@
 
 
     </select>
+    <select id="getRecentry" resultType="com.julong.nucleicacid.entity.RecentryItem">
+        select   c.ITEMNAME as itemname,
+               to_char(cf.ITEMID) as itemcode,
+               ( select unitname from MA_UNIT where unitid = c.UNITID and rownum &lt; 2 ) as unit,
+               c.PRICE as price,
+               c.standard as specs,
+               cf.QUANTITY as qty,
+               cf.amount as total,
+               c.CATALOGID as itemcls,
+               cft.ISCHARGE as ISCHARGE,
+               cft.ISDELETE as ISDELETE,
+               ( select sum(AMOUNT) from PC_CL_DATA_RECIPEENTRY a where a.ischarge = '1' and a.RECIPEID = cf.recipeid ) as ZJE,
+               cft.PATIENTID as PATIENTID  ,
+               nvl(cf.EXEUTEDEPT,-1) as EXECDEPT,
+               nvl(cf.entrytype,-1) as CFLX
+         from PC_CL_DATA_RECIPEENTRY cf , AB_ORDERITEM c , pc_cl_data_recipe cft
+         where cf.ITEMID = c.ITEMID   and cft.recipeid = cf.recipeid
+         and cf.recipeid = #{oneRecNo}
+    </select>
 
 </mapper>
