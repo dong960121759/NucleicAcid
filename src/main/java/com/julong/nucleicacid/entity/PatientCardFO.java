@@ -2,6 +2,7 @@ package com.julong.nucleicacid.entity;
 
 
 import com.baomidou.mybatisplus.annotation.TableField;
+import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
 
@@ -14,7 +15,7 @@ public class PatientCardFO implements Serializable{
 	/**
 	*PA_DATA_PATIENTCARD.OID type:NUMBER len:22 scale:0
 	*/
-	@TableField( "oid" ) 
+	@TableId( "oid" )
 	private  Long oid ;
 
 	/**

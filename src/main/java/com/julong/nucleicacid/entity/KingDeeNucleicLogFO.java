@@ -1,10 +1,9 @@
 package com.julong.nucleicacid.entity;
 
-import com.baomidou.mybatisplus.annotation.IdType;
-import com.baomidou.mybatisplus.annotation.TableField;
-import com.baomidou.mybatisplus.annotation.TableId;
-import com.baomidou.mybatisplus.annotation.TableName;
+import com.baomidou.mybatisplus.annotation.*;
 import lombok.Data;
+
+import java.io.Serializable;
 
 /**
  * @className: KingDeeNucleicLogFO
@@ -12,8 +11,10 @@ import lombok.Data;
  */
 @Data
 @TableName("CL_NUCLEICLOG_KINGDEE")
-public class KingDeeNucleicLogFO {
-    @TableId(value = "OID",type = IdType.AUTO)
+
+public class KingDeeNucleicLogFO implements Serializable {
+
+    @TableId(value = "OID")
     private Long oid;
     /**healthCardNo	req	String	是	健康卡号*/
     @TableField("HEALTHCARDNO")

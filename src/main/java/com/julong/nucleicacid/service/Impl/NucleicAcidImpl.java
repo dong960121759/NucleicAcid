@@ -19,6 +19,7 @@ import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.TransactionStatus;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.interceptor.TransactionAspectSupport;
+import org.springframework.transaction.support.DefaultTransactionDefinition;
 
 import java.math.BigDecimal;
 import java.text.DateFormat;
@@ -52,10 +53,6 @@ public class NucleicAcidImpl implements NucleicAcid {
     private Long _defaultRecipeLimitDays ;//处方有效期
     private final SimpleDateFormat _formatDate_his = new SimpleDateFormat("yyyy.MM.dd");
 
-    @Autowired
-    DataSourceTransactionManager dataSourceTransactionManager;
-    @Autowired
-    TransactionDefinition transactionDefinition;
 
 
     private final NucleicAcidMapper nucleicAcidMapper;
@@ -122,19 +119,14 @@ public class NucleicAcidImpl implements NucleicAcid {
      * 生成OID
      */
     private Long smOidGenerate(String  fid) {
-        TransactionStatus transactionStatus = dataSourceTransactionManager.getTransaction(transactionDefinition);
-        SmOidGeneratorFO smOidGeneratorFO= new SmOidGeneratorFO();
-        try {
-            smOidGeneratorFO = smOidGeneratorMapper.selectById(fid);
+
+
+            SmOidGeneratorFO smOidGeneratorFO= smOidGeneratorMapper.selectById(fid);
             Long fcurrOid =smOidGeneratorFO.getFcurrOid();
             smOidGeneratorFO.setFcurrOid(fcurrOid+1);
             smOidGeneratorMapper.updateById(smOidGeneratorFO);
             smOidGeneratorFO = smOidGeneratorMapper.selectById(fid);
 
-            dataSourceTransactionManager.commit(transactionStatus);     //手动提交
-        }catch (Exception e) {
-            dataSourceTransactionManager.rollback(transactionStatus);       //事务回滚
-        }
 
         return smOidGeneratorFO.getFcurrOid();
 
@@ -144,9 +136,8 @@ public class NucleicAcidImpl implements NucleicAcid {
      * 
      */
     private String smNoGenerate(Long noType) {
-        TransactionStatus transactionStatus = dataSourceTransactionManager.getTransaction(transactionDefinition);
-        SmOidGeneratorFO smOidGeneratorFO= new SmOidGeneratorFO();
-        try {
+
+
             QueryWrapper<GeneratorNoFO> queryWrapper=new QueryWrapper<>();
 
             queryWrapper.eq("notype",noType);
@@ -157,10 +148,7 @@ public class NucleicAcidImpl implements NucleicAcid {
                 generatorNoFO.setCurrentNo(currentNo+1);
                 generatorNoMapper.updateById(generatorNoFO);
             }
-            dataSourceTransactionManager.commit(transactionStatus);     //手动提交
-        }catch (Exception e) {
-            dataSourceTransactionManager.rollback(transactionStatus);       //事务回滚
-        }
+
         return nucleicAcidMapper.getGeneratorNo(noType);
 
     }
@@ -477,6 +465,7 @@ public class NucleicAcidImpl implements NucleicAcid {
         List<Long> itemIdList = nucleicAcidMapper.getGroupItems(_defaultHsjcGroupID);
         int rowNo = 2;
         for (Long itemId: itemIdList){
+            recipeEntryVO = new ClRecentryFO();
             recipeEntryVO.setRecipeid(recipe.getRecipeid());
 
             recipeEntryVO.setEntrytype( nucleicAcidMapper.getOrderItemPretype( itemId ));
@@ -537,6 +526,8 @@ public class NucleicAcidImpl implements NucleicAcid {
         kingDeeNucleicLogFO.setPatientId(String.valueOf(patientinfoFO.getPatientid()));
         kingDeeNucleicLogFO.setPhone(patientinfoFO.getMobile());
         kingDeeNucleicLogFO.setItemId(String.valueOf(_defaultHsjcGroupID));
+
+        kingDeeNucleicLogFO.setOid(smOidGenerate("CL_NUCLEICLOG_KINGDEE"));
         kingDeeNucleicLogMapper.insert(kingDeeNucleicLogFO);
 
         addOrderOut.setResultCode(KingDeeCodeInfo.SUCCESS);
@@ -617,7 +608,7 @@ public class NucleicAcidImpl implements NucleicAcid {
             }
         }
         // 地点校验，否，不生成PAYNO 该结算既有114新市门诊 又有总院
-        if(has114 == hasother){
+        if(getPayInfoOutSets.size()>0 && has114 == hasother){
             getPayInfoOut.setResultCode(KingDeeCodeInfo.FAILED);
             getPayInfoOut.setResultDesc("该结算既有114新市门诊处方 又有总院的！");
             return getPayInfoOut;

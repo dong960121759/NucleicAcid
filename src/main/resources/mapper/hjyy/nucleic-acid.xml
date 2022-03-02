@@ -160,18 +160,18 @@
                                                                          and nvl(cf1.SOCIALTYPE,'9') != '9'   and cf1.isdelete = '0' and cf1.ischarge = '0'
         )   --处方中的自费
       and br.ISDELETE = '0'  and cf.ISDELETE = '0' and cf.isCharge = '0'
-      and to_char(cf.INPUTTIME,'yyyy-mm-dd') > to_char(sysdate - :limitDay , 'yyyy-mm-dd')
+      and to_char(cf.INPUTTIME,'yyyy-mm-dd') > to_char(sysdate - #{limitDay} , 'yyyy-mm-dd')
       <if test=" beginDate!=null and beginDate !=''">
-      and to_char(cf.INPUTTIME,'yyyy-mm-dd') > #{beginDate} and  :endDate
+      and to_char(cf.INPUTTIME,'yyyy-mm-dd') >= #{beginDate}
       </if>
         <if test=" beginDate!=null and beginDate !=''">
-      and to_char(cf.INPUTTIME,'yyyy-mm-dd') &lt;  #{endDate}
+      and to_char(cf.INPUTTIME,'yyyy-mm-dd') &lt;=  #{endDate}
       </if>
       and br.HCNO = #{cardNo}
     order by cf.PATIENTID,cf.ENCOUNTERID,cf.RECIPEID
     </select>
     <select id="getPaybillfee" resultType="com.julong.nucleicacid.model.GetPaybillfeeOut">
-        select
+
         --payAmout	res	String	是	自费金额(单位：分)
         --recPayAmout	res	String	是	统筹金额(单位：分)
         --totalPayAmout	res	String	是	总金额(单位：分)

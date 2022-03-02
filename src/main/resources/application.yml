@@ -19,6 +19,8 @@ mybatis-plus:
 
 logging:
   config: classpath:logback-spring.xml
+
+
 _defaultPayorID: 3
 _defaultPlanID: 7
 _defaultWxUserID: 999999
