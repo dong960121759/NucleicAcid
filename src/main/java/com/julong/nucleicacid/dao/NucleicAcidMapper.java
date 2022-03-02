@@ -1,8 +1,6 @@
 package com.julong.nucleicacid.dao;
 
-import com.julong.nucleicacid.entity.RecentryItem;
-import com.julong.nucleicacid.entity.UnChrgRecipeBillFO;
-import com.julong.nucleicacid.entity.UnChrgRecipeFO;
+import com.julong.nucleicacid.entity.*;
 import com.julong.nucleicacid.model.*;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
@@ -88,7 +86,17 @@ public interface NucleicAcidMapper {
      * @param recIds
      * @return
      */
-    List<UnChrgRecipeBillFO> getRecipsbyRecIds(List<Long> recIds);
+    List<UnChrgRecipeBillFO> getRecipsbyRecIds(@Param("recIds")List<Long> recIds);
 
     List<RecentryItem> getRecentry(@Param("oneRecNo")long oneRecNo);
+
+    List<String> getRecipsbyEncounterID(List<Long> recNoListLong);
+
+    List<ClRecentryFO> getClRecentryFOs(List<Long> oneDrRecsList);
+
+    List<ClChrgentryFO> mzCalculateClChrgentryFOs(List<Long> oneDrRecsList);
+
+    List<ClInvoentryFO> mzCalculateClInvoentryFOs(List<Long> oneDrRecsList);
+
+    List<LisRequestFO> getLisRequest(List<Long> oneDrRecsList);
 }

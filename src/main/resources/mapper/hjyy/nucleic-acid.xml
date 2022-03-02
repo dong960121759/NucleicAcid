@@ -193,14 +193,18 @@
     </select>
     <resultMap id="getRecipsbyRecIdsMap" type="com.julong.nucleicacid.entity.UnChrgRecipeBillFO">
         <id column="encounterid" property="encounterid"/>
-        <collection column="recipeid" property="recipeids" />
+        <collection  property="recipeids"  ofType="String">
+        <constructor>
+            <arg column="recipeid" />
+        </constructor>
+        </collection>
         <collection property="getPaybillfeeOutSets" ofType="com.julong.nucleicacid.model.GetPaybillfeeOutSet">
             <result column="typeCode" property="typeCode"/>
             <result column="typeName" property="typeName"/>
-            <result column="tyeAmout" property="typeAmout"/>
+            <result column="typeAmout" property="typeAmout" />
         </collection>
     </resultMap>
-    <select id="getRecipsbyRecIds" resultMap="getRecipsbyRecIdsMap" resultType="com.julong.nucleicacid.entity.UnChrgRecipeBillFO">
+    <select id="getRecipsbyRecIds" resultMap="getRecipsbyRecIdsMap" resultType="com.julong.nucleicacid.entity.UnChrgRecipeBillFO"  parameterType="java.util.List">
     select
         a.encounterid AS encounterid,
         a.RECIPEID AS recipeid,
@@ -209,12 +213,12 @@
         to_char(nvl( decode( b.ISCHARGE , '1' ,  b.AMOUNT,0 ),0))   AS typeAmout
 
     from PC_CL_DATA_RECIPE a , PC_CL_DATA_RECIPEENTRY b
-    where a.recipeid = b.recipeid and a.RECIPEID in
-        <foreach  collection="list" item="recIds" index="index"
-                               open="(" close=")" separator=",">
-        #{recIds}
+    where a.recipeid = b.recipeid
+        <if test="recIds != null">and a.RECIPEID in
+        <foreach collection="recIds" item="recId" index="index" open="(" close=")" separator=",">
+        #{recId}
         </foreach>
-
+        </if>
 
     </select>
     <select id="getRecentry" resultType="com.julong.nucleicacid.entity.RecentryItem">
@@ -235,6 +239,153 @@
          from PC_CL_DATA_RECIPEENTRY cf , AB_ORDERITEM c , pc_cl_data_recipe cft
          where cf.ITEMID = c.ITEMID   and cft.recipeid = cf.recipeid
          and cf.recipeid = #{oneRecNo}
+    </select>
+    <select id="getRecipsbyEncounterID" resultType="java.lang.String">
+
+        select  to_char( wm_concat(a.RECIPEID) )
+        from PC_CL_DATA_RECIPE a where RECIPEID in
+        <foreach  collection="recNoListLong" item="recNo" index="index"
+                  open="(" close=")" separator=",">
+            #{recNo}
+        </foreach>
+
+        group by a.ENCOUNTERID
+    </select>
+    <select id="getClRecentryFOs" resultType="com.julong.nucleicacid.entity.ClRecentryFO">
+        select * from PC_CL_DATA_RECIPEENTRY where RECIPEID in
+        <foreach  collection="oneDrRecsList" item="oneDrRec" index="index"
+                  open="(" close=")" separator=",">
+            #{oneDrRec}
+        </foreach>
+        and ischarge = '1'
+    </select>
+    <select id="mzCalculateClChrgentryFOs" resultType="com.julong.nucleicacid.entity.ClChrgentryFO">
+        select
+        100 AS discountrate,
+        cft.deptid AS deptid,
+        cft.docid AS docid,
+        0 AS discountsum,
+        xm.clcatalogid AS cataid,
+        sum(cfmx.amount) AS totalsum,
+        sum(cfmx.amount) AS spsum,
+        sysdate AS inputtime,
+        sum( nvl( cfmx.IMMAMOUNT , 0 ) ) AS immtotalsum
+        from PC_CL_DATA_RECIPEENTRY cfmx , PC_CL_DATA_RECIPE cft ,ab_orderitem xm
+        where cfmx.recipeid = cft.recipeid and cfmx.ischarge = '1' and cfmx.itemid = xm.itemid
+        and cft.recipeid in
+        <foreach  collection="oneDrRecsList" item="oneDrRec" index="index"
+                  open="(" close=")" separator=",">
+            #{oneDrRec}
+        </foreach>
+        group by cft.deptid, cft.docid , xm.clcatalogid
+    </select>
+    <select id="mzCalculateClInvoentryFOs" resultType="com.julong.nucleicacid.entity.ClInvoentryFO">
+        select xm.clinvoicecataid  AS cataid,
+               nvl( sum(cfmx.amount),0) AS amount,
+               nvl(sum(cfmx.IMMAMOUNT),0) AS immamount
+        from PC_CL_DATA_RECIPEENTRY cfmx , PC_CL_DATA_RECIPE cft ,ab_orderitem xm
+        where cfmx.recipeid = cft.recipeid and cfmx.ischarge = '1' and cfmx.itemid = xm.itemid
+        and cft.recipeid in
+        <foreach  collection="oneDrRecsList" item="oneDrRec" index="index"
+                  open="(" close=")" separator=",">
+            #{oneDrRec}
+        </foreach>
+        group by xm.clinvoicecataid
+    </select>
+    <select id="getLisRequest" resultType="com.julong.nucleicacid.entity.LisRequestFO">
+        select distinct '0'                                                                             as HISREQUESTID
+                      , '1'                                                                             as TRUSTID
+                      , to_char(cf.RECIPEID)                                                            as REQUESTNO
+                      , to_char(mx.entryid)                                                             as HISID
+                      , to_char(cf.encounterid)                                                         as PATIENTNO
+                      , br.name                                                                         as PATIENTNAME
+                      , br.hcno                                                                         as RXNO
+                      , '1'                                                                             as PATIENTTYPE
+                      , to_char(br.sex)                                                                 as PATIENTSEX
+                      , br.idno                                                                         as PATIENTIDCARD
+                      , br.mobile                                                                       as MOBILETELEPHONE
+                      , br.BIRTHDAY                                                                     as PATIENTBIRTHDAY
+                      , to_char(cf.DEPTID)                                                              as DEPTCODE
+                      , (select deptname from om_department where deptid = cf.deptid and rownum &lt; 2) as DEPTNAME
+                      , to_char(cf.docid)                                                               as DRCODE
+                      , (select username from sm_user where userid = cf.docid and rownum &lt; 2)        as DRNAME
+                      , ''                                                                              as DIAGNAME
+                      , ''                                                                              as BEDNO
+                      , ''                                                                              as REQUESTAIM
+                      , to_char(mx.itemid)                                                              as ITEMCODE
+                      , (select GROUPCODE from ab_ordergroup where groupid = mx.itemid)                 as ITEMCODE
+                      , (select GROUPNAME from ab_ordergroup where groupid = mx.itemid)                 as ITEMNAME
+                      , (select to_char(nvl(sum(mx3.amount), 0))
+                         from pc_cl_data_recipeentry mx3
+                         where mx3.ischarge = '1'
+                           and mx3.recipeid = cf.recipeid
+                           and mx3.groupno = mx.groupno)                                                as ITEMPRICE
+                      , ''                                                                              as SAMPLENAME
+                      , '0'                                                                             as TRANSTTAG
+                      , decode(instr(nvl(mx.note, 'null'), 'T'), 0, '1', '3')                           as PRI
+                      , '0'                                                                             as SENDDRMESSAGE
+                      , '0'                                                                             as SENDPATIENTMESSAGE
+                      , '0'                                                                             as SENDLABMESSAGE
+                      , sysdate                                                                         as REQUESTTIME
+                      , mx.note                                                                         as NOTE
+                      , '-1'                                                                            as CHARGEID
+        from pc_cl_data_recipeentry mx
+           , pc_cl_data_recipe cf
+           , pa_data_patient br
+           , pc_cl_data_recipeentry mx2
+        where cf.RECIPEID = mx.RECIPEID
+          and br.patientid = cf.patientid
+          and mx2.itemsource = 10
+          and mx2.entrytype = 7
+          and mx.recipeid = mx2.recipeid
+          and mx.entrytype = 99
+          and mx.groupno = mx2.groupno
+          and mx2.recipeid in (:cfj)
+        union all
+        select distinct '0'                                                                             as HISREQUESTID
+                      , '1'                                                                             as TRUSTID
+                      , to_char(cf.RECIPEID)                                                            as REQUESTNO
+                      , to_char(mx.entryid)                                                             as HISID
+                      , to_char(cf.encounterid)                                                         as PATIENTNO
+                      , br.name                                                                         as PATIENTNAME
+                      , br.hcno                                                                         as RXNO
+                      , '1'                                                                             as PATIENTTYPE
+                      , to_char(br.sex)                                                                 as PATIENTSEX
+                      , br.idno                                                                         as PATIENTIDCARD
+                      , br.mobile                                                                       as MOBILETELEPHONE
+                      , br.BIRTHDAY                                                                     as PATIENTBIRTHDAY
+                      , to_char(cf.DEPTID)                                                              as DEPTCODE
+                      , (select deptname from om_department where deptid = cf.deptid and rownum &lt; 2) as DEPTNAME
+                      , to_char(cf.docid)                                                               as DRCODE
+                      , (select username from sm_user where userid = cf.docid and rownum &lt; 2)        as DRNAME
+                      , ''                                                                              as DIAGNAME
+                      , ''                                                                              as BEDNO
+                      , ''                                                                              as REQUESTAIM
+                      , to_char(mx.itemid)                                                              as ITEMCODE
+                      , (select itemcode from ab_orderitem where itemid = mx.itemid)                    as ITEMCODE
+                      , (select itemname from ab_orderitem where itemid = mx.itemid)                    as ITEMNAME
+                      , (select to_char(nvl(sum(mx3.amount), 0))
+                         from pc_cl_data_recipeentry mx3
+                         where mx3.ischarge = '1'
+                           and mx3.recipeid = cf.recipeid
+                           and mx3.groupno = mx.groupno)                                                as ITEMPRICE
+                      , ''                                                                              as SAMPLENAME
+                      , '0'                                                                             as TRANSTTAG
+                      , decode(instr(nvl(mx.note, 'null'), 'T'), 0, '1', '3')                           as PRI
+                      , '0'                                                                             as SENDDRMESSAGE
+                      , '0'                                                                             as SENDPATIENTMESSAGE
+                      , '0'                                                                             as SENDLABMESSAGE
+                      , sysdate                                                                         as REQUESTTIME
+                      , mx.note                                                                         as NOTE
+                      , '-1'                                                                            as CHARGEID
+        from pc_cl_data_recipeentry mx,
+             pc_cl_data_recipe cf,
+             pa_data_patient br
+        where cf.RECIPEID = mx.RECIPEID
+          and br.patientid = cf.patientid
+          and mx.itemsource = 1
+          and mx.entrytype = 7
+          and mx.recipeid in (:cfj)
     </select>
 
 </mapper>

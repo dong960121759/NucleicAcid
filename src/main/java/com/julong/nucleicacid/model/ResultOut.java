@@ -2,8 +2,7 @@ package com.julong.nucleicacid.model;
 
 import lombok.Data;
 
-import javax.xml.bind.annotation.XmlRootElement;
-import javax.xml.bind.annotation.XmlSeeAlso;
+import javax.xml.bind.annotation.*;
 import java.util.List;
 
 /**
@@ -18,12 +17,15 @@ import java.util.List;
         GetPayInfoOutSet.class,
         GetCompletedPayInfoOutSet.class
 })
+@XmlAccessorType(XmlAccessType.FIELD)
 public class ResultOut<T> {
     /**resultCode	res	String	是	处理结果代码：0-成功*/
     private String resultCode;
     /**resultDesc	res	String	否	处理结果描述*/
     private String resultDesc;
     /**res	List <payListInfo>集合*/
+
+    @XmlAnyElement(lax=true)
     private List<T> set;
 
 

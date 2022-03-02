@@ -12,6 +12,7 @@ import java.math.BigDecimal;
  * @date: 2022/1/10 15:23
  */
 @Data
+
 @XmlAccessorType(XmlAccessType.FIELD)
 @XmlRootElement(name = "payListInfo")
 public class GetPayInfoOutSet {

@@ -11,15 +11,10 @@ import com.julong.nucleicacid.utils.KingDeeCodeInfo;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.mybatis.spring.annotation.MapperScan;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.TransactionDefinition;
-import org.springframework.transaction.TransactionStatus;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.interceptor.TransactionAspectSupport;
-import org.springframework.transaction.support.DefaultTransactionDefinition;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -52,6 +47,18 @@ public class NucleicAcidImpl implements NucleicAcid {
     private Long  _defaultHsjcGroupID;
     @Value("${_defaultRecipeLimitDays}")
     private Long _defaultRecipeLimitDays ;//处方有效期
+    @Value("${_defaultWxPayID}")
+    private Long _defaultWxPayID;
+    @Value("${_defaultZfbPayID}")
+    private Long _defaultZfbPayID;
+    @Value("${_defaultDgNshPayID}")
+    private Long _defaultDgNshPayID;
+    @Value("${_noteJY}")
+    private String _noteJY;
+    @Value("${_noteJY}")
+    private String _noteFS;
+    @Value("${_noteJY}")
+    private String _noteBC;
     private final SimpleDateFormat _formatDate_his = new SimpleDateFormat("yyyy.MM.dd");
 
 
@@ -68,7 +75,12 @@ public class NucleicAcidImpl implements NucleicAcid {
     private final ClRecentryMapper clRecentryMapper;
     private final KingDeeNucleicLogMapper kingDeeNucleicLogMapper;
     private final MobilePayHisPayNoFOMapper mobilePayHisPayNoFOMapper;
-    public NucleicAcidImpl(NucleicAcidMapper nucleicAcidMapper, PatientinfoFOMapper patientinfoFOMapper, PatientCardFOMapper patientCardFOMapper, GeneratorNoMapper generatorNoMapper, SmOidGeneratorMapper smOidGeneratorMapper, PaCLRegisterMapper paCLregisterMapper, PcClrecipeMapper pcClrecipeMapper, OrderGroupMapper orderGroupMapper, OrderItemMapper orderItemMapper, ClRecentryMapper clRecentryMapper, KingDeeNucleicLogMapper kingDeeNucleicLogMapper, MobilePayHisPayNoFOMapper mobilePayHisPayNoFOMapper) {
+    private final ClChargeFOMapper clChargeFOMapper;
+    private final ClChrgentryFOMapper clChrgentryFOMapper;
+    private final ClPaymentFOMapper clPaymentFOMapper;
+    private final ClInvoiceFOMapper clInvoiceFOMapper;
+    private final ClInvoentryFOMapper clInvoentryFOMapper;
+    public NucleicAcidImpl(NucleicAcidMapper nucleicAcidMapper, PatientinfoFOMapper patientinfoFOMapper, PatientCardFOMapper patientCardFOMapper, GeneratorNoMapper generatorNoMapper, SmOidGeneratorMapper smOidGeneratorMapper, PaCLRegisterMapper paCLregisterMapper, PcClrecipeMapper pcClrecipeMapper, OrderGroupMapper orderGroupMapper, OrderItemMapper orderItemMapper, ClRecentryMapper clRecentryMapper, KingDeeNucleicLogMapper kingDeeNucleicLogMapper, MobilePayHisPayNoFOMapper mobilePayHisPayNoFOMapper, ClChargeFOMapper clChargeFOMapper, ClChrgentryFOMapper clChrgentryFOMapper, ClPaymentFOMapper clPaymentFOMapper, ClInvoiceFOMapper clInvoiceFOMapper, ClInvoentryFOMapper clInvoentryFOMapper) {
         this.nucleicAcidMapper = nucleicAcidMapper;
         this.patientinfoFOMapper = patientinfoFOMapper;
         this.patientCardFOMapper = patientCardFOMapper;
@@ -81,6 +93,11 @@ public class NucleicAcidImpl implements NucleicAcid {
         this.clRecentryMapper = clRecentryMapper;
         this.kingDeeNucleicLogMapper = kingDeeNucleicLogMapper;
         this.mobilePayHisPayNoFOMapper = mobilePayHisPayNoFOMapper;
+        this.clChargeFOMapper = clChargeFOMapper;
+        this.clChrgentryFOMapper = clChrgentryFOMapper;
+        this.clPaymentFOMapper = clPaymentFOMapper;
+        this.clInvoiceFOMapper = clInvoiceFOMapper;
+        this.clInvoentryFOMapper = clInvoentryFOMapper;
     }
     /**
      * 获得出生日期
@@ -304,8 +321,6 @@ public class NucleicAcidImpl implements NucleicAcid {
      * 1.4核酸检测预约下单
      * 接口代码	cstmr. nucleic.addOrder
      * 说明	通过调用该接口预约申请核酸检测项目开单
-     *
-     * 
      */
     @Override
     public AddOrderOut nucleicAddOrder(AddOrderIn addOrderIn) {
@@ -679,24 +694,28 @@ public class NucleicAcidImpl implements NucleicAcid {
             recList = sb.deleteCharAt(sb.length()-1).toString();
         }else{
             String[] strRecs = recList.split(",");
+
             for (String strRec : strRecs){
+                System.out.println(strRec);
                 recIds.add(Long.valueOf(strRec));
             }
         }
-
+        System.out.println("recIds: "+recIds.size());
         List<UnChrgRecipeBillFO> unChrgRecipeBillFOS = nucleicAcidMapper.getRecipsbyRecIds(recIds);
         List<GetPaybillfeeOutSet> getPaybillfeeOutSets = new ArrayList<>();
+
+        System.out.println("unChrgRecipeBillFOS:"+unChrgRecipeBillFOS);
         BigDecimal amout = new BigDecimal("0");
         for (UnChrgRecipeBillFO unChrgRecipeBillFO: unChrgRecipeBillFOS) {
             //his的mobilepay_hispayno表处理
             StringBuilder sb = new StringBuilder();
-            recList = sb.deleteCharAt(sb.length()-1).toString();
+            //recList = sb.deleteCharAt(sb.length()-1).toString();
             for (String recId: unChrgRecipeBillFO.getRecipeids()){
                 sb.append(recId).append(",");
             }
-            String eachRecipesOne = sb.deleteCharAt(sb.length()-1).toString();
+            String eachRecipesOneEncounterId = sb.deleteCharAt(sb.length()-1).toString();
 
-            String hispaynoKey = getHisPayNo(eachRecipesOne);
+            String hispaynoKey = getHisPayNo(eachRecipesOneEncounterId,patList.get(0).getPatientid());
 
             for (GetPaybillfeeOutSet getPaybillfeeOutSet: unChrgRecipeBillFO.getGetPaybillfeeOutSets()){
                 BigDecimal typeAmout = new BigDecimal(getPaybillfeeOutSet.getTypeAmout());
@@ -705,6 +724,7 @@ public class NucleicAcidImpl implements NucleicAcid {
             }
 
             getPaybillfeeOutSets.addAll(unChrgRecipeBillFO.getGetPaybillfeeOutSets());
+
         }
         getPaybillfeeOut.setPayAmout(amout.toString());
         getPaybillfeeOut.setRecPayAmout("0");
@@ -804,7 +824,7 @@ public class NucleicAcidImpl implements NucleicAcid {
             try{
                 Map tMap = null ;
 
-                tMap = Hjyy_mzCharge( payMode , payAmout , recPayAmout , null , payIn ) ;
+                tMap = null;// Hjyy_mzCharge( payMode , payAmout , recPayAmout , null , payIn ) ;
 
                 if(tMap != null){
                     String errorMessage = (String) tMap.get("errorMessage") ;
@@ -918,7 +938,7 @@ public class NucleicAcidImpl implements NucleicAcid {
     public GetCompletedPayDetailInfoOut getCompletedPayDetailInfo(GetCompletedPayDetailInfoIn getCompletedPayDetailInfoIn) {
         return null;
     }
-    private String getHisPayNo(String recNoList){
+    private String getHisPayNo(String recNoList,Long patientId){
             // 判断是否有KEYNO，若无则新生成hispayno 和 加记录
             String hispaynoKey = DigestUtils.md5Hex(recNoList).toUpperCase(); // MD5（hispayno）
             String oldKey = null;
@@ -926,7 +946,7 @@ public class NucleicAcidImpl implements NucleicAcid {
             queryWrapper.eq("ISCHRG", "0");
             queryWrapper.eq("RECNO",recNoList);
             List<MobilePayHisPayNoFO> mobilePayHisPayNoFOS = mobilePayHisPayNoFOMapper.selectList(queryWrapper);
-            if (mobilePayHisPayNoFOS !=null){
+            if (mobilePayHisPayNoFOS !=null && mobilePayHisPayNoFOS.size()>0){
                 oldKey = mobilePayHisPayNoFOS.get(0).getHisPayNo();
             }
             if (oldKey == null ||"".equals(oldKey)){
@@ -934,7 +954,7 @@ public class NucleicAcidImpl implements NucleicAcid {
                 hispayFO.setGenDate(Calendar.getInstance().getTime());
                 hispayFO.setHisPayNo(hispaynoKey);
                 hispayFO.setRecNo(recNoList);
-//                hispayFO.setPid(patList.get(0).getPatientid());
+                hispayFO.setPid(patientId);
                 mobilePayHisPayNoFOMapper.insert(hispayFO);
             }else {
                 //用原有的Key
@@ -987,7 +1007,7 @@ public class NucleicAcidImpl implements NucleicAcid {
 
         List<String> recNoList = new ArrayList<String>() ; //处方号的列表，生成FO时要用
         String recByPayno = payIn.getPrescriptionIds();
-        String  hisPayNo = getHisPayNo(recByPayno);
+        String  hisPayNo = getHisPayNo(recByPayno, Long.valueOf(payIn.getPatientId()));
 
 
         String[] allRec = recByPayno.split(",") ;//全部的此次结算的处方串，包括N个医生的
@@ -1039,17 +1059,14 @@ public class NucleicAcidImpl implements NucleicAcid {
 
         try {
             //取系统设置支付代码 defaultWxPayID
-            Long payCode = null ;
-            payCode = _defaultWxPayID ;
+            Long payCode = _defaultWxPayID ;
 
             //if(NYDictInfo.PAYMODE_3.equals(payMode)){
             //equalsIgnoreCase
-            if(NYDictInfo.PAYMODE_3.equals(payMode)){
+            if(KingDeeCodeInfo.PAYMODE_98.equals(payMode)){
                 payCode = _defaultWxPayID ;
-            }else if(NYDictInfo.PAYMODE_4.equals(payMode)){
+            }else if(KingDeeCodeInfo.PAYMODE_99.equals(payMode)){
                 payCode = _defaultZfbPayID ;
-            }else if(NYDictInfo.PAYMODE_DGNSH.equals(payMode)){
-                payCode = _defaultDgNshPayID ;
             }else{
                 returnMap.put("errorMessage", "平台支付方式不正确2！") ;
                 return returnMap ;
@@ -1075,7 +1092,7 @@ public class NucleicAcidImpl implements NucleicAcid {
             //// end 取系统设置
 
             //取病人信息
-            PatientinfoFO  patientinfoFO  = getDao().getPatinfoByPid(pid) ;
+            PatientinfoFO  patientinfoFO  = patientinfoFOMapper.selectById(pid);
             if(patientinfoFO == null){
                 returnMap.put("errorMessage", "取病人信息失败！") ;
                 return returnMap ;
@@ -1100,9 +1117,13 @@ public class NucleicAcidImpl implements NucleicAcid {
             name = patientinfoFO.getName();
             cardno = patientinfoFO.getHcno();
             phone = patientinfoFO.getMobile();
+            List<Long> recNoListLong = new ArrayList<>();
+            for (String s : recNoList) {
 
+                recNoListLong.add(Long.valueOf(s));
+            }
 
-            List<String> allDrRecs = getDao().getRecipsbyEncounterID(recNoList) ;
+            List<String> allDrRecs = nucleicAcidMapper.getRecipsbyEncounterID(recNoListLong) ;
             //Source data : ecNoList  = ls001, ls002 , zs001, zs002
             //Target data : allDrRecs[0] = ls001,ls002 ;  allDrRecs[1] = zs001,zs002
 
@@ -1118,16 +1139,16 @@ public class NucleicAcidImpl implements NucleicAcid {
                 //loop 1: oneDrRecs = ls001, ls002 > rec[0] = ls001 , rec[1] = ls002
                 //loop 2: oneDrRecs = zs001 , zs002 > rec[0]=zs001 , rec[1] = zs002
 
-                List<String> oneDrRecsList = new ArrayList<String>() ; //1个医生的处方串
+                List<Long> oneDrRecsList = new ArrayList<>() ; //1个医生的处方串
 
                 for(String recNo1 : rec1){ //1个医生处方串转化成LIST
-                    oneDrRecsList.add(recNo1); //数组到 LIST
+                    oneDrRecsList.add(Long.valueOf(recNo1)); //数组到 LIST
                 }
 
                 //1个医生处方列表生成 处方头FO的LIST
-                List<ClRecipeFO> oneDrRecipeFOs = getDao().getClRecipeFOs(oneDrRecsList) ;
+                List<PcClrecipeFO> oneDrRecipeFOs = pcClrecipeMapper.selectBatchIds(oneDrRecsList) ;
                 //1个医生处方列表生成 处方明细 FO 的LIST
-                List<ClRecentryFO> oneDrRecentryFOs = getDao().getClRecentryFOs(oneDrRecsList) ;
+                List<ClRecentryFO> oneDrRecentryFOs = nucleicAcidMapper.getClRecentryFOs(oneDrRecsList) ;
 
                 //此次结算的1个医生的全部处方金额
                 BigDecimal oneTotalMoney = new BigDecimal("0") ;
@@ -1138,15 +1159,16 @@ public class NucleicAcidImpl implements NucleicAcid {
                     oneTotalMoney = oneTotalMoney.add(total) ;
                 }
 
-                //算费
-                Map tMap = getDao().mzCalculate(oneDrRecsList); //因为此处入参：是LIST，其中些的转换
-                if(tMap == null){
+                List<ClChrgentryFO> clChrgentryFOs = nucleicAcidMapper.mzCalculateClChrgentryFOs(oneDrRecsList) ;
+                if (clChrgentryFOs.size()<1){
                     returnMap.put("errorMessage", "算费出错！") ;
                     return returnMap ;
                 }
-
-                List<ClChrgentryFO> clChrgentryFOs = (List) tMap.get("ClChrgentryFOs") ;
-                List<ClInvoentryFO> clInvoentryFOs = (List) tMap.get("ClInvoentryFOs") ;
+                List<ClInvoentryFO> clInvoentryFOs = nucleicAcidMapper.mzCalculateClInvoentryFOs(oneDrRecsList) ;
+                if (clInvoentryFOs.size()<1){
+                    returnMap.put("errorMessage", "算费出错！") ;
+                    return returnMap ;
+                }
 
                 ClChargeFO clChargeFO = new ClChargeFO() ;
                 clChargeFO.setPayorid( patientinfoFO.getPayorid()) ;
@@ -1159,19 +1181,23 @@ public class NucleicAcidImpl implements NucleicAcid {
                 clChargeFO.setSpsum( oneTotalMoney ) ;
                 clChargeFO.setHcno( patientinfoFO.getHcno() ) ;
 
-                chrgNo = getDao().createClChargeFO(clChargeFO);	//保存：结算表
+                clChargeFO.setChargeid(smOidGenerate("AB_CL_DATA_CHARGE"));
+                clChargeFOMapper.insert(clChargeFO);
+                chrgNo = clChargeFO.getChargeid();
 
                 for(ClChrgentryFO clChrgentryFO : clChrgentryFOs ){
                     clChrgentryFO.setChargeid( chrgNo ) ;
+                    clChrgentryFO.setEntryid(smOidGenerate("AB_CL_DATA_CHARGEENTRY"));
+                    clChrgentryFOMapper.insert(clChrgentryFO); 	////保存：结算分类表
                 }
-                getDao().createFOs(clChrgentryFOs);	////保存：结算分类表
 
                 ClPaymentFO clPaymentFO = new ClPaymentFO() ;
                 clPaymentFO.setChargeid(chrgNo) ;
                 clPaymentFO.setPaymentid(payCode) ;
                 clPaymentFO.setPaysum( oneTotalMoney ) ;
+                clPaymentFO.setPayid(smOidGenerate("AB_CL_DATA_CHARGEPAYMENT"));
+                clPaymentFOMapper.insert(clPaymentFO);
 
-                getDao().createFO(clPaymentFO);	////保存：支付表
 
                 ClInvoiceFO clInvoiceFO = new ClInvoiceFO() ;
                 fpNo = "wx" + chrgNo ;
@@ -1186,89 +1212,45 @@ public class NucleicAcidImpl implements NucleicAcid {
                 clInvoiceFO.setSpsum(oneTotalMoney ) ;
                 clInvoiceFO.setAcctsum( new BigDecimal(0));
                 clInvoiceFO.setSbsum(   new BigDecimal(0) );
-
-                fpID = getDao().createClInvoiceFO(clInvoiceFO);	//保存 :发票表
+                clInvoiceFO.setInvoiceid(smOidGenerate("AB_CL_DATA_INVOICE"));
+                clInvoiceFOMapper.insert(clInvoiceFO);
+                fpID = clInvoiceFO.getInvoiceid();	//保存 :发票表
 
                 for(ClInvoentryFO clInvoentryFO : clInvoentryFOs ){
                     clInvoentryFO.setInvoiceid( fpID ) ;
+                    clInvoentryFO.setEntryid(smOidGenerate("AB_CL_DATA_INVOICEENTRY"));
+                    clInvoentryFOMapper.insert(clInvoentryFO);//保存 ：发票明细表
                 }
 
-                getDao().createFOs(clInvoentryFOs);	//保存 ：发票明细表
 
                 Boolean isasrec = false;
 
                 //导诊提示的处理
-                for(ClRecipeFO oneRecipeFO : oneDrRecipeFOs){
+                for(PcClrecipeFO oneRecipeFO : oneDrRecipeFOs){
 
-                    Long cfcataid = null;
-                    Long deptID = null;
+                    Long cfcataid = oneRecipeFO.getCataid();
+                    Long deptID = oneRecipeFO.getDeptid();
                     Long mdwin = null;
-                    Long cfh = null;
+                    Long cfh= oneRecipeFO.getRecipeid() ;
                     Long cflx = null ; //处方类型
 
-                    cfcataid = oneRecipeFO.getCataid() ;
-                    deptID = oneRecipeFO.getDeptid() ;
-                    cfh = oneRecipeFO.getRecipeid() ;
 
                     //处理指引导信息 begin
-                    List<RecentryItem> recentryLists = new ArrayList<RecentryItem>();
-
-                    recentryLists = getDao().getRecentry( new BigDecimal(cfh) ) ;
+                    List<RecentryItem> recentryLists = nucleicAcidMapper.getRecentry(cfh) ;
 
                     //判断是否检验处方，若是需要处理申请单数据
                     if(recentryLists != null && recentryLists.size() > 0){
-                        Iterator entryIt = recentryLists.iterator();
-                        while(entryIt.hasNext()){
-                            RecentryItem entryItem = (RecentryItem) entryIt.next();
-                            cflx = entryItem.getEntryType() ;
+                        for (RecentryItem entryItem : recentryLists) {
+                            cflx = entryItem.getEntryType();
 
                             //此批处方中若有一个检验时，就需要做申请明细表
-                            if ( cflx.equals(new Long("7") ) )  {
+                            if (cflx.equals(new Long("7"))) {
                                 isasrec = true;
                             }
                             ////
                         }
                     }
 
-//						20200305 commented begin
-                    //西药，成药
-//						if( new Long(1).equals( cfcataid)|| new Long(2).equals(cfcataid ) ) {
-//
-//								if(recentryLists != null && recentryLists.size() > 0){
-//									Iterator entryIt = recentryLists.iterator();
-//									while(entryIt.hasNext()){
-//										RecentryItem entryItem = (RecentryItem) entryIt.next();
-//										Long executeDept = entryItem.getExecuteDept();
-//										if(new Long(52).equals(executeDept)){
-//											if(!guideList.contains(_noteXY)){
-//												guideList.add(_noteXY);
-//											}
-//										}
-//										if(new Long(50).equals(executeDept)){
-//											if(!guideList.contains(_noteZY)){
-//												guideList.add(_noteZY);
-//											}
-//										}
-//									}
-//								}
-//							}
-
-//						if( new Long(3).equals( cfcataid ) || new Long(11).equals( cfcataid )  ){
-//							if(!guideList.contains(_noteZY)){
-//								guideList.add(_noteZY);
-//							}
-//						}
-
-//						if(new Long(6).equals(cfcataid )){
-//							String ksmc = null;
-//							ksmc = getDao().getOmDepartmentFO( deptID ).getDeptname( ) ;
-//							_noteZL = _noteZL.replace("dept", ksmc ) ;
-//							if(!guideList.contains(_noteZL)){
-//								guideList.add(_noteZL);
-//							}
-//						}
-
-                    //20200305 commented end
 
                     if(new Long(5).equals(cfcataid)){
                         if(!guideList.contains(_noteJY)){
@@ -1277,17 +1259,15 @@ public class NucleicAcidImpl implements NucleicAcid {
                     }
                     if(new Long(4).equals( cfcataid )){
                         if(recentryLists != null && recentryLists.size() > 0){
-                            Iterator entryIt = recentryLists.iterator();
-                            while(entryIt.hasNext()){
-                                RecentryItem recipeEntryVO = (RecentryItem) entryIt.next();
+                            for (RecentryItem recipeEntryVO : recentryLists) {
                                 Long executeDept = recipeEntryVO.getExecuteDept();
-                                if(new Long(45).equals(executeDept)){
-                                    if(!guideList.contains(_noteBC)){
+                                if (new Long(45).equals(executeDept)) {
+                                    if (!guideList.contains(_noteBC)) {
                                         guideList.add(_noteBC);
                                     }
                                 }
-                                if(new Long(41).equals(executeDept)){
-                                    if(!guideList.contains(_noteFS)){
+                                if (new Long(41).equals(executeDept)) {
+                                    if (!guideList.contains(_noteFS)) {
                                         guideList.add(_noteFS);
                                     }
                                 }
@@ -1302,12 +1282,14 @@ public class NucleicAcidImpl implements NucleicAcid {
                 //20180701-begin
                 // 保存检验中间表,直接传入rec list , 用SQL构造好结构，直接存
 
-                if (isasrec.equals(new Boolean(true))) {
-                    List <lisRequestFO> asfos = new ArrayList<lisRequestFO>();
-                    asfos = getDao().getLisRequest( oneDrRecsList , chrgNo ) ;
+                if (isasrec.equals(Boolean.TRUE)) {
+                    List <LisRequestFO> asfos = nucleicAcidMapper.getLisRequest( oneDrRecsList  ) ;
 
                     if ( asfos!=null && asfos.size() > 0 ) {
-                        getDao().createFOs(asfos) ;
+                        for (LisRequestFO lisRequestFO: asfos) {
+                            lisRequestFO.setChargeid(String.valueOf(chrgNo));
+                            getDao().createFOs(asfos) ;
+                        }
                     }else {
                         returnMap.put("errorMessage", "保存检验中间表错误！") ;
                         return returnMap ;
