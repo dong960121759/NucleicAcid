@@ -1084,20 +1084,19 @@ public class NucleicAcidImpl implements NucleicAcid {
         if (detailInfoOut.getOrderDetailInfo()!=null && detailInfoOut.getOrderDetailInfo().size()>0){
             for (GetCompletedPayDetailInfoOutSet detailInfoOutSet: detailInfoOut.getOrderDetailInfo()){
                 //单位为分
-                if (detailInfoOutSet.getDetailAmout()!=null && "".equals(detailInfoOutSet.getDetailAmout())) {
-                    BigDecimal detailAmout = new BigDecimal(detailInfoOutSet.getDetailAmout()).multiply(new BigDecimal(100));
-                    detailInfoOutSet.setDetailAmout(detailAmout.toString());
+                if (detailInfoOutSet.getDetailAmout()!=null && !"".equals(detailInfoOutSet.getDetailAmout())) {
+                    BigDecimal detailAmout = new BigDecimal(detailInfoOutSet.getDetailAmout());
+                    detailInfoOutSet.setDetailAmout(detailAmout.multiply(new BigDecimal(100)).toString());
                 }
-                if (detailInfoOutSet.getUsageAdvice()!=null && "".equals(detailInfoOutSet.getUsageAdvice())) {
+                if (detailInfoOutSet.getUsageAdvice()!=null && !"".equals(detailInfoOutSet.getUsageAdvice())) {
 
-                    BigDecimal usageAdvice = new BigDecimal(detailInfoOutSet.getUsageAdvice()).multiply(new BigDecimal(100));
-                    detailInfoOutSet.setUsageAdvice(usageAdvice.toString());
+                    BigDecimal usageAdvice = new BigDecimal(detailInfoOutSet.getUsageAdvice());
+                    detailInfoOutSet.setUsageAdvice(usageAdvice.multiply(new BigDecimal(100)).toString());
                 }
-
-                //处方好处理
 
 
             }
+            //处方号处理
             if (detailInfoOut.getPrescriptionIds()!=null && detailInfoOut.getPrescriptionIds().size()>0){
                 StringBuilder sb = new StringBuilder();
                 for (String str: detailInfoOut.getPrescriptionIds()){
@@ -1243,13 +1242,16 @@ public class NucleicAcidImpl implements NucleicAcid {
         try {
             //取系统设置支付代码 defaultWxPayID
             Long payCode = _defaultWxPayID ;
-
+            String payMethod;
             //if(NYDictInfo.PAYMODE_3.equals(payMode)){
             //equalsIgnoreCase
             if(KingDeeCodeInfo.PAYMODE_98.equals(payMode)){
                 payCode = _defaultWxPayID ;
+                payMethod = "KengDeeWeixin";
             }else if(KingDeeCodeInfo.PAYMODE_99.equals(payMode)){
                 payCode = _defaultZfbPayID ;
+                payMethod = "KengDeeAlipay";
+
             }else{
                 returnMap.put("errorMessage", "平台支付方式不正确2！") ;
                 return returnMap ;
@@ -1488,12 +1490,12 @@ public class NucleicAcidImpl implements NucleicAcid {
                 HcMobilePaymentFO hcMobilePaymentFO = new HcMobilePaymentFO() ;
                 hcMobilePaymentFO.setChrgNo(chrgNo.toString()) ;
                 hcMobilePaymentFO.setType("1") ;
-                hcMobilePaymentFO.setPatCardType("01"); //TODO
+                //hcMobilePaymentFO.setPatCardType("");
                 hcMobilePaymentFO.setPatCardNo(payIn.getHealthCardNo());
                 hcMobilePaymentFO.setHisOrdNum(hisPayNo);
-                hcMobilePaymentFO.setPsOrdNum(payIn.getOrderId());
-                hcMobilePaymentFO.setAgtOrdNum(payIn.getTradeNo());
-                hcMobilePaymentFO.setPayMode(String.valueOf(payCode));
+                hcMobilePaymentFO.setPsOrdNum(payIn.getTradeNo());
+                hcMobilePaymentFO.setAgtOrdNum(payIn.getOrderId());
+                hcMobilePaymentFO.setPayMode(payMethod);
 //							hcMobilePaymentFO.setPayAmt(inParameter.getPayAmt());
 
                 hcMobilePaymentFO.setPayTime(_formatDateTime_wx.format(cal.getTime()));
@@ -1614,27 +1616,6 @@ public class NucleicAcidImpl implements NucleicAcid {
                     }
 
                 }
-							/*
-							 *
-			if(vo != null){
-				Long requisitionID = vo.getRequisitionID();
-				if(requisitionID != null){
-					AppointmentReqVO reqVO = getAppointmentServiceLocal().getAppointmentReqVO(requisitionID);
-					if(reqVO != null){
-						Long bookStatus = reqVO.getBookStatus();
-						if(new Long(SYDictConstants.DICT95_1).equals(bookStatus)){
-							reqVO.setBookStatus(new Long(SYDictConstants.DICT95_6));
-							getAppointmentServiceLocal().updateAppointmentReq(reqVO);
-						}
-					}
-					getAppointmentServiceLocal().remove();
-				}
-			}
-
-							 * */
-
-                //20181112 end
-
 
                 //修改his支付单据表记录状态
                 MobilePayHisPayNoFO hispayFO = mobilePayHisPayNoFOMapper.selectById(hisPayNo);
@@ -1727,11 +1708,6 @@ public class NucleicAcidImpl implements NucleicAcid {
                     //20210913 发热门诊处方以发热收费窗来处理
                 }
 
-//							//way1:
-//							mdqueues = allocateRecipes( mdrecs ,   win ) ; //返回LIST
-//							if ( mdqueues.size() > 0 ) {
-//								getDao().createFOs( mdqueues ) ;
-//							}
 
                 //20181122 再校验 若该 分配窗口，却未分时，报错
                 //该分
@@ -1782,17 +1758,7 @@ public class NucleicAcidImpl implements NucleicAcid {
                 }catch(Exception e) {
                     returnMap.put("errorMessage", "分配窗口方法出错！！") ;
                     //return returnMap ;
-                }finally {
-//								if ( mdrecs.size() > 0 ) {
-//
-//								}
                 }
-
-                //way2 end
-
-
-
-                //20180911 - end
 
             }
             // ------ end 按处方分单结算  ------
