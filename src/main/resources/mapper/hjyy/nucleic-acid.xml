@@ -222,20 +222,23 @@
 
     </select>
     <select id="getRecentry" resultType="com.julong.nucleicacid.entity.RecentryItem">
-        select   c.ITEMNAME as itemname,
-               to_char(cf.ITEMID) as itemcode,
-               ( select unitname from MA_UNIT where unitid = c.UNITID and rownum &lt; 2 ) as unit,
-               c.PRICE as price,
-               c.standard as specs,
-               cf.QUANTITY as qty,
-               cf.amount as total,
+        select   c.ITEMNAME as fitemname,
+               to_char(cf.ITEMID) as fitemcode,
+               '20' AS ftypecode,
+               ( select unitname from MA_UNIT where unitid = c.UNITID and rownum &lt; 2 ) as faunitname,
+               c.PRICE as Fprice,
+               c.standard as Std,
+               cf.QUANTITY as Famount,
+               cf.amount as Fsum,
                c.CATALOGID as itemcls,
+               '0' AS fisappend,
+                '0' AS Ffjf,
                cft.ISCHARGE as ISCHARGE,
                cft.ISDELETE as ISDELETE,
-               ( select sum(AMOUNT) from PC_CL_DATA_RECIPEENTRY a where a.ischarge = '1' and a.RECIPEID = cf.recipeid ) as ZJE,
+               ( select sum(AMOUNT) from PC_CL_DATA_RECIPEENTRY a where a.ischarge = '1' and a.RECIPEID = cf.recipeid ) as AmountAll,
                cft.PATIENTID as PATIENTID  ,
-               nvl(cf.EXEUTEDEPT,-1) as EXECDEPT,
-               nvl(cf.entrytype,-1) as CFLX
+               nvl(cf.EXEUTEDEPT,-1) as ExecuteDept,
+               nvl(cf.entrytype,-1) as EntryType
          from PC_CL_DATA_RECIPEENTRY cf , AB_ORDERITEM c , pc_cl_data_recipe cft
          where cf.ITEMID = c.ITEMID   and cft.recipeid = cf.recipeid
          and cf.recipeid = #{oneRecNo}
@@ -340,7 +343,11 @@
           and mx.recipeid = mx2.recipeid
           and mx.entrytype = 99
           and mx.groupno = mx2.groupno
-          and mx2.recipeid in (:cfj)
+          and mx2.recipeid in
+              <foreach  collection="oneDrRecsList" item="oneDrRec" index="index"
+                                         open="(" close=")" separator=",">
+        #{oneDrRec}
+             </foreach>
         union all
         select distinct '0'                                                                             as HISREQUESTID
                       , '1'                                                                             as TRUSTID
@@ -385,7 +392,11 @@
           and br.patientid = cf.patientid
           and mx.itemsource = 1
           and mx.entrytype = 7
-          and mx.recipeid in (:cfj)
+          and mx.recipeid in
+              <foreach  collection="oneDrRecsList" item="oneDrRec" index="index"
+                                        open="(" close=")" separator=",">
+        #{oneDrRec}
+    </foreach>
     </select>
     <select id="getNeedDispMed1" resultType="java.lang.Long">
         select count(cfmx.RECIPEID) from PC_CL_DATA_RECIPEentry cfmx
@@ -408,5 +419,137 @@
         select * from MA_CL_DATA_PHARMACYQUEUE  fo  where fo.windowID = #{winID} and     (fo.queueStatus = 1 or   fo.queueStatus = 2) order by fo.queueTime
 
     </select>
+    <select id="getCompletedPayInfo" resultType="com.julong.nucleicacid.model.GetCompletedPayInfoOutSet" parameterType="com.julong.nucleicacid.model.GetCompletedPayInfoIn">
+    select
+    --clinicSeq	payListInfo	String	是	就诊流水号
+    to_char(clr.ENCOUNTERID) AS clinicSeq,
+    --clinicTime	payListInfo	String	是	就诊日期
+    to_char(clr.REGTIME,'yyyy-MM-dd')AS clinicTime,
+    --hospitalId	payListInfo	String	是	医院代码
+    '-' AS hospitalId,
+    --deptId	payListInfo	String	是	接诊科室代码
+    to_char(clr.REGDEPT) AS deptId,
+    --deptName	payListInfo	String	是	接诊科室名称
+    (select DEPTNAME from OM_DEPARTMENT where DEPTID = clr.REGDEPT) AS deptName,
+    --doctorId	payListInfo	String	是	接诊医生代码
+    clr.REGDOCTOR AS doctorId,
+    --doctorName	payListInfo	String	是	接诊医生姓名
+    (select USERNAME from SM_USER where USERID = clr.REGDOCTOR)AS doctorName,
+    --payAmout	payListInfo	String	是	自费金额(单位：分)
+    abc.SPSUM AS payAmout,
+    --recPayAmout	payListInfo	String	是	统筹金额(单位：分)
+    abc.ACCTSUM AS recPayAmout,
+    --totalPayAmout	payListInfo	String	是	总金额(单位：分)
+    abc.TOTALSUM AS totalPayAmout,
+    --receiptId	payListInfo	String	是	收据ID
+    abi.INVOICEID AS receiptId,
+    --chargeDate	payListInfo	String	是	缴费日期
+    to_char(abc.CHARGETIME,'yyyy-MM-dd')AS chargeDate,
+    --remark	payListInfo	String	否	备注
+    '-'AS remark,
+    --orderId	payListInfo	String	否	支付平台订单号
+    hcm.PSORDNUM AS orderId,
+    --allowRefund	payListInfo	String	否	是否允许退费，1表示允许退费，0表示不允许，默认值为0
+    '0'AS allowRefund,
+    --prescriptionIds	payListInfo	String	否	处方号,允许线上退费时必须
+    --AS prescriptionIds,
+    --refundType	payListInfo	String	否	退费方式， 线上退费填"online"
+    --AS refundType,
+    --refundNo	payListInfo	String	否	退费流水号，refundStatus=1或者2时必须
+    --AS refundNo,
+    --refundStatus	payListInfo	orderInfo	否	退费状态 0已支付 1退费中 2 已退费
+     decode(abc.ISBEREFUNDED,'1','2','0')AS refundStatus
+    --refundFee	payListInfo	String	否	退费自费金额，单位分
+    --AS refundFee,
+    --refundTime	payListInfo	String	否	退费时间 yyyy-MM-dd HH:mm:ss
+    --AS refundTime,
+    --hasExpress	payListInfo	String	否	是否有药品快递信息 1包含 0不包含
+    --AS hasExpress,
+    --deliveryStatus	payListInfo	String	否	药品物流状态0 或空，不支持配送1 可配送2 已配送
+    --AS deliveryStatus,
+    --medicineCode	payListInfo	String	否	取药码
+    --AS medicineCode,
+    --pickUpLocation	payListInfo	String	否	取药药房
+    --AS pickUpLocation
+    --
+    from AB_CL_DATA_CHARGE abc ,PA_DATA_PATIENT pat, PA_CL_DATA_REGISTER clr ,AB_CL_DATA_INVOICE abi, HC_MOBILEPAYMENT hcm
+        where abc.CHARGEID = abi.CHARGEID and  to_char(abc.CHARGEID )= hcm.CHRGNO and abc.HCNO = pat.HCNO and pat.PATIENTID = clr.PATIENTID   AND abc.ISDELETE = '0'
+          and hcm.TYPE in('1','3','11','31')
+          AND abc.HCNO = #{healthCardNo}
+          AND pat.PATIENTID = #{patientId}
+          AND to_char(clr.REGTIME,'yyyy-MM-dd')> = #{startDate}
+          AND to_char(clr.REGTIME,'yyyy-MM-dd')&lt; = #{endDate}
+    </select>
+    <resultMap id="getCompletedPayDetailInfoMap" type="com.julong.nucleicacid.model.GetCompletedPayDetailInfoOut">
+        <collection  property="prescriptionIds"  ofType="String">
+            <constructor>
+                <arg column="prescriptionId1" />
+            </constructor>
+        </collection>
+        <collection property="orderDetailInfo" ofType="com.julong.nucleicacid.model.GetCompletedPayDetailInfoOutSet">
+            <id column="detailId" property="detailId"/>
+            <result column="detailFee" property="detailFee"/>
+            <result column="detailName" property="detailName"/>
+            <result column="detailCount" property="detailCount"/>
+            <result column="detailUnit" property="detailUnit"/>
+            <result column="detailAmout" property="detailAmout"/>
+            <result column="detailSpec" property="detailSpec"/>
+            <result column="detailPrice" property="detailPrice"/>
+            <result column="usage" property="usage"/>
+            <result column="usageAdvice" property="usageAdvice"/>
+        </collection>
+    </resultMap>
+    <select id="getCompletedPayDetailInfo" resultMap="getCompletedPayDetailInfoMap" resultType="com.julong.nucleicacid.model.GetCompletedPayDetailInfoOut" parameterType="com.julong.nucleicacid.model.GetCompletedPayDetailInfoIn">
+        select
+        --isMedicinalDetail	res	String	否	是否查看药品明细（1有，0 无）
+        '1' AS isMedicinalDetail,
+        --prescriptionId	res	String	否	处方号（用于查看发药信息必填）多个分方则以英文逗号拼接
+        to_char(pcr.RECIPEID) AS prescriptionId1,
+        --invoiceNo	res	String	否	虚拟发票号
+        abi.INVOICENO AS invoiceNo,
+        --payType	res	String	否	付款方式
+        hcm.PAYMODE AS payType,
+        --machineNo	res	String	否	终端编号
+        --tradeDate	res	String	否	交易时间
+        hcm.PAYTIME AS tradeDate,
+        --tradeNo	res	String	否	交易平台流水号
+        hcm.AGTORDNUM AS tradeNo,
+        --invoiceUrl	res	String	否	电子票据地址url(此地址非空时将不允许退费)
+        --orderDetailInfo	res	List orderDetailInfo	否	缴费订单明细集合
+        --detailFee	orderDetailInfo	String	是	缴费费别
+        (select PAYORNAME from AB_PAYOR where PAYORID = abc.PAYORID) AS detailFee,
+        --detailId	orderDetailInfo	String	是	缴费细目流水号，要求唯一
+        pcre.ENTRYID AS detailId,
+        --detailName	orderDetailInfo	String	是	缴费细目名称
+        abo.ITEMNAME AS detailName,
+        --detailCount	orderDetailInfo	String	是	缴费细目数量
+        TO_CHAR(pcre.QUANTITY) AS detailCount,
+        --detailUnit	orderDetailInfo	String	是	缴费细目单位
+        (select UNITNAME from ma_unit where UNITID =  pcre.QUANUNITID )AS detailUnit,
+        --detailAmout	orderDetailInfo	String	是	缴费细目金额，单位：分
+        to_char(pcre.AMOUNT ) AS detailAmout,
+        --detailSpec	orderDetailInfo	String	是	缴费规格
+        abo.STANDARD AS detailSpec,
+        --detailPrice	orderDetailInfo	String	是	缴费细目单价，单位：分
+        pcre.PRICE AS detailPrice,
+        --usage	orderDetailInfo	String	是	用法格式：每次处方用量/每天频率/天数/（服药方法、给药途径）例如：1片/3did/4/口服
+        TO_CHAR(pcre.DOSAGE) || '/' || (select FREQNAME from PH_FREQUENCY where FREQID = pcre.FREQUENCYID) || '/' ||
+        to_char(pcre.days)  || '/' || (select DIRENAME from PH_DIRECTION where DIREID = pcre.DIRECTIONID) AS usage,
+        --usageAdvice	orderDetailInfo	String	否	用法嘱托 例如：服用前切忌饮酒
+        (select NOTENAME from PH_FREQUENCYNOTE where OID = pcre.FREQUENCYID) AS usageAdvice
+        --detailDeliverStatus	orderDetailInfo	String	否	药品物流状态 0或空,支持配送1不可配送
+        --remark	orderDetailInfo	String	否	备注
+        --
+        from AB_CL_DATA_INVOICE abi, AB_CL_DATA_CHARGE abc ,PC_CL_DATA_RECIPE pcr,
+             PC_CL_DATA_RECIPEENTRY pcre, HC_MOBILEPAYMENT hcm, AB_ORDERITEM abo
+
+        where abi.CHARGEID = abc.CHARGEID and abc.CHARGEID = pcr.CHARGEID and pcr.RECIPEID = pcre.RECIPEID
+          and to_char(abc.CHARGEID) = hcm.CHRGNO AND pcre.ITEMID = abo.ITEMID
+          and abi.INVOICEID = #{receiptId}
+          and to_char(pcr.ENCOUNTERID) = #{clinicSeq}
+            --需要收费
+        and pcre.ISCHARGE = '1'
+
+       </select>
 
 </mapper>

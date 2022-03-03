@@ -87,18 +87,22 @@ public interface NucleicAcidMapper {
      * @return
      */
     List<UnChrgRecipeBillFO> getRecipsbyRecIds(@Param("recIds")List<Long> recIds);
-
+    /**
+     * 跟据处方号取可处方明细
+     * @param oneRecNo 处方号
+     * @return
+     */
     List<RecentryItem> getRecentry(@Param("oneRecNo")long oneRecNo);
 
-    List<String> getRecipsbyEncounterID(List<Long> recNoListLong);
+    List<String> getRecipsbyEncounterID(@Param("recNoListLong")List<Long> recNoListLong);
 
-    List<ClRecentryFO> getClRecentryFOs(List<Long> oneDrRecsList);
+    List<ClRecentryFO> getClRecentryFOs(@Param("oneDrRecsList")List<Long> oneDrRecsList);
 
-    List<ClChrgentryFO> mzCalculateClChrgentryFOs(List<Long> oneDrRecsList);
+    List<ClChrgentryFO> mzCalculateClChrgentryFOs(@Param("oneDrRecsList")List<Long> oneDrRecsList);
 
-    List<ClInvoentryFO> mzCalculateClInvoentryFOs(List<Long> oneDrRecsList);
+    List<ClInvoentryFO> mzCalculateClInvoentryFOs(@Param("oneDrRecsList")List<Long> oneDrRecsList);
 
-    List<LisRequestFO> getLisRequest(List<Long> oneDrRecsList);
+    List<LisRequestFO> getLisRequest(@Param("oneDrRecsList")List<Long> oneDrRecsList);
     /**
      * 用SQL 来判断 是否需要配药 1
 
@@ -125,4 +129,18 @@ public interface NucleicAcidMapper {
      * 按照queueTime排序
      */
     List<ClMdqueueFO> getPharmacyQueueFOs(@Param("winID")Long winID);
+    /**
+     * 2.2.3.4 已缴费记录查询
+     * 接口代码	outpatient.getCompletedPayInfo
+     * 说明	通过调用本接口获取用户已缴费记录。
+     *
+     */
+    List<GetCompletedPayInfoOutSet> getCompletedPayInfo(GetCompletedPayInfoIn getCompletedPayInfoIn);
+    /**
+     * 2.2.3.5 已缴费记录明细查询
+     * 接口代码	outpatient.getCompletedPayDetailInfo
+     * 说明	通过调用该接口获取用户已缴费记录的详细信息。
+     *
+     */
+    GetCompletedPayDetailInfoOut getCompletedPayDetailInfo(GetCompletedPayDetailInfoIn getCompletedPayDetailInfoIn);
 }

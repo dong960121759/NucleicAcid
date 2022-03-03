@@ -22,6 +22,7 @@ public class GetCompletedPayDetailInfoOut{
     private String isMedicinalDetail;
     /**prescriptionId	res	String	否	处方号 （用于查看发药信息必填）多个分方则以英文逗号拼接*/
     private String prescriptionId;
+    private List<String> prescriptionIds;
     /**invoiceNo	res	String	否	虚拟发票号*/
     private String invoiceNo;
     /**payType	res	String	否	付款方式*/
