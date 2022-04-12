@@ -37,12 +37,22 @@ public class NucleicAcidController {
         wscResult.setResultDesc("传入参数出错！");
 
         switch (requestIn.getService()) {
+            case "hospital.getDeptInfo":
+                //2.1.1.1 获取医院科室信息接口
+                return XmlUtil.pojoToXml((nucleicAcidImpl.getDeptInfo((GetDeptInfoIn) XmlUtil.xmlToPojo(GetDeptInfoIn.class,inXml))));
+            case "hospital.getDoctorInfo":
+                //2.1.1.2 获取医生信息接口
+                return XmlUtil.pojoToXml((nucleicAcidImpl.getDoctorInfo((GetDoctorInfoIn) XmlUtil.xmlToPojo(GetDoctorInfoIn.class,inXml))));
             case "baseinfo.getOutpatientInfo":
                 //2.1.2.1 门诊患者基本信息查
                 return XmlUtil.pojoToXml(nucleicAcidImpl.getOutpatientInfo((OutpatientInfoIn) XmlUtil.xmlToPojo(OutpatientInfoIn.class,inXml)));
             case "user.createNewPatient":
                 //2.2.4.1在线建卡
                 return XmlUtil.pojoToXml(nucleicAcidImpl.createNewPatient((CreateNewPatientIn) XmlUtil.xmlToPojo(CreateNewPatientIn.class,inXml)));
+            case "support.getRegisterInfo":
+                //2.2.5.1 挂号记录查询
+                return XmlUtil.pojoToXml(nucleicAcidImpl.getRegisterInfoIn((GetRegisterInfoIn) XmlUtil.xmlToPojo(GetRegisterInfoIn.class,inXml)));
+
             case "cstmr.nucleic.getItem":
                 //1.2核酸检测预约项目类型
                 return XmlUtil.pojoToXml(nucleicAcidImpl.nucleicGetItem((GetItemIn) XmlUtil.xmlToPojo(GetItemIn.class,inXml)));
@@ -67,8 +77,7 @@ public class NucleicAcidController {
             case "outpatient.getCompletedPayDetailInfo":
             //2.2.3.5 已缴费记录明细查询
                 return XmlUtil.pojoToXml((nucleicAcidImpl.getCompletedPayDetailInfo((GetCompletedPayDetailInfoIn) XmlUtil.xmlToPojo(GetCompletedPayDetailInfoIn.class,inXml))));
-
-        }
+             }
         return XmlUtil.pojoToXml(wscResult);
     }
 }

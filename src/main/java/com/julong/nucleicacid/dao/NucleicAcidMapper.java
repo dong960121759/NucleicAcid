@@ -143,4 +143,41 @@ public interface NucleicAcidMapper {
      *
      */
     GetCompletedPayDetailInfoOut getCompletedPayDetailInfo(GetCompletedPayDetailInfoIn getCompletedPayDetailInfoIn);
+    /**
+     * 2.1.1.2 获取医生信息接口
+     * <p>
+     * 接口代码	hospital.getDoctorInfo
+     * 说明	通过调用该接口获取指定分院指定条件的医生信息。
+     * deptId或doctorId不为空时，查询指定的医生列表信息；
+     * deptId和doctorId均为空时，查询全部医生列表信息；
+     *
+     * @param xmlToPojo
+     * @return
+     */
+    List<GetDoctorInfoOutSet> getDoctorInfo(GetDoctorInfoIn xmlToPojo);
+    /**
+     * 2.1.1.1 获取医院科室信息接口
+     * 接口代码	hospital.getDeptInfo
+     * 说明	通过本接口获取医院指定分院指定条件的科室列表
+     * deptId或deptType不为空时，查询指定的科室列表信息；
+     * deptId和deptType均为空时，查询全部科室列表信息；
+     *
+     * @param xmlToPojo
+     * @return
+     */
+    List<GetDeptInfoOutSet> getDeptInfo(GetDeptInfoIn xmlToPojo);
+
+    /**
+     * 2.2.5.1 挂号记录查询
+     * 接口代码	support.getRegisterInfo
+     * 说明	可通过调用本接口查询某个指定条件的挂号记录，查询条件不能同时为空，至少要传入一个
+     * 注意事项：
+     * 1.支持代其他渠道支付挂号费用，新增出参：registerType，paySatus，orderTypeNam，payFee等。
+     * 2.如需代付，必须返回的节点包括：hospitalId，regDate，shiftCode，shiftName，bookingNo，orderType，orderTypeName，payStatus，regFee，treatFee，payFee以及医生排班的参数等。
+     * 3.请求入参如果只有healthCardNo和patientId，则返回该病人有效的挂号记录，如果传入bookingNo或者orderId或者clinicSeq，则只返回对应的挂号记录
+     *
+     * @param registerInfoIn
+     * @return
+     */
+    List<GetRegisterInfoOutSet> getRegisterInfoIn(GetRegisterInfoIn registerInfoIn);
 }

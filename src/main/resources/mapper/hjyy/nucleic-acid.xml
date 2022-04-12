@@ -79,31 +79,31 @@
 		where o.CATALOGID = p.PRESUBCATAID and o.ITEMID = #{itemId}
     </select>
     <select id="">
-       --/**clinicSeq	payListInfo	String	是	就诊流水号*/
-       --/**clinicTime	payListInfo	String	是	就诊日期*/
-       --/**hospitalId	payListInfo	String	是	医院代码*/
-       --/**deptId	payListInfo	String	是	接诊科室代码*/
-       --/**deptName	payListInfo	String	是	接诊科室名称*/
-       --/**doctorId	payListInfo	String	是	接诊医生代码*/
-       --/**doctorName	payListInfo	String	是	接诊医生姓名*/
-       --/**payAmout	payListInfo	String	是	自费金额(单位：分)*/
-       --/**recPayAmout	payListInfo	String	是	统筹金额(单位：分)*/
-       --/**totalPayAmout	payListInfo	String	是	总金额(单位：分)*/
-       --/**receiptId	payListInfo	String	是	收据ID*/
-       --/**chargeDate	payListInfo	String	是	缴费日期*/
-       --/**remark	payListInfo	String	否	备注*/
-       --/**orderId	payListInfo	String	否	支付平台订单号*/
-       --/**allowRefund	payListInfo	String	否	是否允许退费，1表示允许退费，0表示不允许，默认值为0*/
-       --/**prescriptionIds	payListInfo	String	否	处方号,允许线上退费时必须*/
-       --/**refundType	payListInfo	String	否	退费方式，线上退费填"online"*/
-       --/**refundNo	payListInfo	String	否	退费流水号，refundStatus=1或者2时必须*/
-       --/**refundStatus	payListInfo	orderInfo	否	退费状态 0已支付1退费中 2 已退费*/
-       --/**refundFee	payListInfo	String	否	退费自费金额，单位分*/
-       --/**refundTime	payListInfo	String	否	退费时间yyyy-MM-dd HH:mm:ss*/
-       --/**hasExpress	payListInfo	String	否	是否有药品快递信息 1包含 0不包含*/
-       --/**deliveryStatus	payListInfo	String	否	药品物流状态 0 或空，不支持配送 1 可配送 2 已配送*/
-       --/**medicineCode	payListInfo	String	否	取药码*/
-       --/**pickUpLocation	payListInfo	String	否	取药药房*/
+       ----clinicSeq	payListInfo	String	是	就诊流水号*/
+       ----clinicTime	payListInfo	String	是	就诊日期*/
+       ----hospitalId	payListInfo	String	是	医院代码*/
+       ----deptId	payListInfo	String	是	接诊科室代码*/
+       ----deptName	payListInfo	String	是	接诊科室名称*/
+       ----doctorId	payListInfo	String	是	接诊医生代码*/
+       ----doctorName	payListInfo	String	是	接诊医生姓名*/
+       ----payAmout	payListInfo	String	是	自费金额(单位：分)*/
+       ----recPayAmout	payListInfo	String	是	统筹金额(单位：分)*/
+       ----totalPayAmout	payListInfo	String	是	总金额(单位：分)*/
+       ----receiptId	payListInfo	String	是	收据ID*/
+       ----chargeDate	payListInfo	String	是	缴费日期*/
+       ----remark	payListInfo	String	否	备注*/
+       ----orderId	payListInfo	String	否	支付平台订单号*/
+       ----allowRefund	payListInfo	String	否	是否允许退费，1表示允许退费，0表示不允许，默认值为0*/
+       ----prescriptionIds	payListInfo	String	否	处方号,允许线上退费时必须*/
+       ----refundType	payListInfo	String	否	退费方式，线上退费填"online"*/
+       ----refundNo	payListInfo	String	否	退费流水号，refundStatus=1或者2时必须*/
+       ----refundStatus	payListInfo	orderInfo	否	退费状态 0已支付1退费中 2 已退费*/
+       ----refundFee	payListInfo	String	否	退费自费金额，单位分*/
+       ----refundTime	payListInfo	String	否	退费时间yyyy-MM-dd HH:mm:ss*/
+       ----hasExpress	payListInfo	String	否	是否有药品快递信息 1包含 0不包含*/
+       ----deliveryStatus	payListInfo	String	否	药品物流状态 0 或空，不支持配送 1 可配送 2 已配送*/
+       ----medicineCode	payListInfo	String	否	取药码*/
+       ----pickUpLocation	payListInfo	String	否	取药药房*/
 
 
     </select>
@@ -551,5 +551,55 @@
         and pcre.ISCHARGE = '1'
 
        </select>
+    <select id="getDoctorInfo" resultType="com.julong.nucleicacid.model.GetDoctorInfoOutSet" parameterType="com.julong.nucleicacid.model.GetDoctorInfoOutSet">
+        select
+        --doctorId	doctorInfo	String	是	医生ID
+        use.USERID AS doctorId,
+        --doctorName	doctorInfo	String	是	医生名称
+        use.USERNAME AS doctorName,
+        --doctorLevelCode	doctorInfo	String	是	医生职称代码
+        to_char(usi.RANKID ) AS doctorLevelCode,
+        --doctorLevel	doctorInfo	String	是	医生职称
+        (SELECT RANKNAME FROM OM_RANK  WHERE RANKID = usi.RANKID) AS doctorLevel,
+        --deptId	doctorInfo	String	是	科室代码
+        to_char(usl.LOCID) AS deptId,
+        --deptName	doctorInfo	String	是	科室名称
+        dept.DEPTNAME AS deptName
+        --description	doctorInfo	String	否	医生简介
+        from SM_USER use ,SM_USERINFO usi , SM_USERLOC usl, OM_DEPARTMENT dept
+        WHERE use.USERID = usi.USERID AND use.USERID = usl.USERID AND usl.LOCID = dept.DEPTID AND usl.ISDEFAULT = '1'
+
+        <if test=" deptId!=null and deptId !=''">
+            AND usl.LOCID = #{deptId}
+        </if>
+        <if test=" doctorId!=null and doctorId !=''">
+            AND usl.LOCID = #{doctorId}
+        </if>
+    </select>
+    <select id="getDeptInfo" resultType="com.julong.nucleicacid.model.GetDeptInfoOutSet" parameterType="com.julong.nucleicacid.model.GetDeptInfoIn">
+        select
+        --deptId	deptInfo	String	是	科室代码*/
+        to_char(dept.DEPTID)AS  deptId,
+        --deptName	deptInfo	String	是	科室名称*/
+        dept.DEPTNAME AS  deptName,
+        --deptType	deptInfo	Integer	是	1专科2 专家*/
+        '-' AS  deptType,
+        --parentId	deptInfo	String	是	上级科室代码,没有填-1*/
+        to_char(dept.parentID) AS  parentId,
+        --description	deptInfo	String	是	科室简介 */
+        '-' AS  description
+        from OM_DEPARTMENT dept
+        where dept.ISDELETE = '0'
+        <if test=" deptId!=null and deptId !=''">
+            AND dept.DEPTID = #{deptId}
+        </if>
+        <if test=" deptType!=null and deptType !=''">
+
+        </if>
+    </select>
+    <select id="getRegisterInfoIn" resultType="com.julong.nucleicacid.model.GetRegisterInfoOutSet" parameterType="com.julong.nucleicacid.model.GetRegisterInfoIn">
+    select
+    from PA_CL_DATA_REGISTER reg
+    </select>
 
 </mapper>

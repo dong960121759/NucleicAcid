@@ -184,9 +184,7 @@ public class NucleicAcidImpl implements NucleicAcid {
      */
     private String smNoGenerate(Long noType) {
 
-
             QueryWrapper<GeneratorNoFO> queryWrapper=new QueryWrapper<>();
-
             queryWrapper.eq("notype",noType);
 
             GeneratorNoFO generatorNoFO = generatorNoMapper.selectOne(queryWrapper);
@@ -199,6 +197,66 @@ public class NucleicAcidImpl implements NucleicAcid {
         return nucleicAcidMapper.getGeneratorNo(noType);
 
     }
+
+    /**
+     * 2.1.1.1 获取医院科室信息接口
+     * 接口代码	hospital.getDeptInfo
+     * 说明	通过本接口获取医院指定分院指定条件的科室列表
+     * deptId或deptType不为空时，查询指定的科室列表信息；
+     * deptId和deptType均为空时，查询全部科室列表信息；
+     *
+     * @param xmlToPojo
+     * @return
+     */
+    @Override
+    public ResultOut<GetDeptInfoOutSet> getDeptInfo(GetDeptInfoIn xmlToPojo) {
+        ResultOut<GetDeptInfoOutSet> returnFO = new ResultOut<>();
+        List<GetDeptInfoOutSet> deptInfoOutSets = nucleicAcidMapper.getDeptInfo(xmlToPojo);
+
+        if (deptInfoOutSets!=null && deptInfoOutSets.size()>0){
+            returnFO.setResultCode(KingDeeCodeInfo.SUCCESS);
+            returnFO.setSet(deptInfoOutSets);
+        }else{
+            returnFO.setResultCode(KingDeeCodeInfo.FAILED);
+            returnFO.setResultDesc("未找到科室！");
+        }
+
+        return returnFO;
+    }
+
+    /**
+     * 2.1.1.2 获取医生信息接口
+     * <p>
+     * 接口代码	hospital.getDoctorInfo
+     * 说明	通过调用该接口获取指定分院指定条件的医生信息。
+     * deptId或doctorId不为空时，查询指定的医生列表信息；
+     * deptId和doctorId均为空时，查询全部医生列表信息；
+     *
+     * @param xmlToPojo
+     * @return
+     */
+    @Override
+    public ResultOut<GetDoctorInfoOutSet> getDoctorInfo(GetDoctorInfoIn xmlToPojo) {
+        ResultOut<GetDoctorInfoOutSet> returnFO = new ResultOut<>();
+        List<GetDoctorInfoOutSet> doctorInfoOutSets = nucleicAcidMapper.getDoctorInfo(xmlToPojo);
+
+        if (doctorInfoOutSets!=null && doctorInfoOutSets.size()>0){
+            returnFO.setResultCode(KingDeeCodeInfo.SUCCESS);
+            returnFO.setSet(doctorInfoOutSets);
+        }else{
+            returnFO.setResultCode(KingDeeCodeInfo.FAILED);
+            returnFO.setResultDesc("未找到医生！");
+        }
+
+        return returnFO;
+    }
+    /**
+     * 2.1.2.1 门诊患者基本信息查询
+     * 接口代码	baseinfo.getOutpatientInfo
+     * 说明	可以通过本接口查询患者在院内登记的门诊个人基本信息。idCardNo、healthCardNo、patientId不能同时为空。
+     * @param infoIn
+     * @return
+     */
     @Override
     public OutpatientInfoOut getOutpatientInfo(OutpatientInfoIn infoIn) {
         OutpatientInfoOut infoOut;
@@ -220,7 +278,11 @@ public class NucleicAcidImpl implements NucleicAcid {
         return infoOut;
     }
 
-
+    /**
+     * 2.2.4.1 在线建卡
+     * 接口代码	user.createNewPatient
+     * 说明	可以通过本接口在HIS系统中创建新的患者档案
+     */
     @Override
     public CreateNewPatientOut createNewPatient(CreateNewPatientIn newPatientIn) {
         log.info("在线建卡");
@@ -316,6 +378,26 @@ public class NucleicAcidImpl implements NucleicAcid {
             newPatientOut.setResultDesc("保存患者信息失败！") ;
             return newPatientOut;
         }
+    }
+
+    /**
+     * 2.2.5.1 挂号记录查询
+     * 接口代码	support.getRegisterInfo
+     * 说明	可通过调用本接口查询某个指定条件的挂号记录，查询条件不能同时为空，至少要传入一个
+     * 注意事项：
+     * 1.支持代其他渠道支付挂号费用，新增出参：registerType，paySatus，orderTypeNam，payFee等。
+     * 2.如需代付，必须返回的节点包括：hospitalId，regDate，shiftCode，shiftName，bookingNo，orderType，orderTypeName，payStatus，regFee，treatFee，payFee以及医生排班的参数等。
+     * 3.请求入参如果只有healthCardNo和patientId，则返回该病人有效的挂号记录，如果传入bookingNo或者orderId或者clinicSeq，则只返回对应的挂号记录
+     *
+     * @param registerInfoIn
+     * @return
+     */
+    @Override
+    public ResultOut<GetRegisterInfoOutSet> getRegisterInfoIn(GetRegisterInfoIn registerInfoIn) {
+        ResultOut<GetRegisterInfoOutSet> returnFO= new ResultOut<>();
+        returnFO.setResultCode(KingDeeCodeInfo.FAILED);
+        List<GetRegisterInfoOutSet> registerInfoOutSets = nucleicAcidMapper.getRegisterInfoIn(registerInfoIn);
+        return returnFO;
     }
 
     /**
@@ -1179,8 +1261,6 @@ public class NucleicAcidImpl implements NucleicAcid {
         Calendar cal = Calendar.getInstance();// 取当前日期。
         String infoMessage = "" ;		//返回指引提示信息
 
-        Map<String , Map> recClassToWin_map = new HashMap<String , Map>() ; 	//记录已分配过的处方类型
-        Map<String , String> execLocationMap = new HashMap<String , String >() ;	//记录处方执行地点
 
         //根据hispayno 得到 recno
         //MOBILEPAY_HISPAYNO( hispayno,recno )
@@ -1431,8 +1511,6 @@ public class NucleicAcidImpl implements NucleicAcid {
                             ////
                         }
                     }
-
-
                     if(new Long(5).equals(cfcataid)){
                         if(!guideList.contains(_noteJY)){
                             guideList.add(_noteJY);
@@ -1455,14 +1533,8 @@ public class NucleicAcidImpl implements NucleicAcid {
                             }
                         }
                     }
-
-                    //处理指引导信息 end
-
                 }
-
-                //20180701-begin
                 // 保存检验中间表,直接传入rec list , 用SQL构造好结构，直接存
-
                 if (isasrec.equals(Boolean.TRUE)) {
                     List <LisRequestFO> asfos = nucleicAcidMapper.getLisRequest( oneDrRecsList  ) ;
 
@@ -1495,7 +1567,7 @@ public class NucleicAcidImpl implements NucleicAcid {
                 hcMobilePaymentFO.setHisOrdNum(hisPayNo);
                 hcMobilePaymentFO.setPsOrdNum(payIn.getTradeNo());
                 hcMobilePaymentFO.setAgtOrdNum(payIn.getOrderId());
-                hcMobilePaymentFO.setPayMode(payMethod);
+                hcMobilePaymentFO.setPayMode(payIn.getPayMode());
 //							hcMobilePaymentFO.setPayAmt(inParameter.getPayAmt());
 
                 hcMobilePaymentFO.setPayTime(_formatDateTime_wx.format(cal.getTime()));

@@ -15,7 +15,10 @@ import java.util.List;
 @XmlRootElement(name = "res")
 @XmlSeeAlso({
         GetPayInfoOutSet.class,
-        GetCompletedPayInfoOutSet.class
+        GetCompletedPayInfoOutSet.class,
+        GetDoctorInfoOutSet.class,
+        GetDeptInfoOutSet.class,
+        GetRegisterInfoOutSet.class
 })
 @XmlAccessorType(XmlAccessType.FIELD)
 public class ResultOut<T> {
