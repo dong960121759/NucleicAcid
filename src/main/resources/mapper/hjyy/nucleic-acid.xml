@@ -597,9 +597,158 @@
 
         </if>
     </select>
-    <select id="getRegisterInfoIn" resultType="com.julong.nucleicacid.model.GetRegisterInfoOutSet" parameterType="com.julong.nucleicacid.model.GetRegisterInfoIn">
-    select
-    from PA_CL_DATA_REGISTER reg
+    <select id="getRegisterInfoIn" resultType="com.julong.nucleicacid.model.GetRegisterInfoOutSet"
+            parameterType="com.julong.nucleicacid.model.GetRegisterInfoIn">
+        select
+            --healthCardNo	req	String	否	患者卡号*/
+            clr.HCNO                             AS healthCardNo,
+            --clinicSeq	req	String	否	就诊流水*/
+            to_char(clr.ENCOUNTERID)             AS clinicSeq,
+            --patientId	req	String	否	患者ID*/
+            to_char(clr.PATIENTID)               AS patientId,
+            --orderId	req	String	否	移动订单号*/
+            clr.BOOKID                           AS orderId,
+            --orderDate	req	String	否	挂号日期【格式：YYYY-MM-DD】*/
+            to_char(clr.REGTIME, 'yyyy-MM-dd')  AS orderDate,
+            --visitDate	req	String	否	就诊日期【格式：YYYY-MM-DD】*/
+            to_char(clr.INPUTTIME, 'yyyy-MM-dd')  AS visitDate,
+            --patientName	req	String	否	患者姓名*/
+            clr.NAME                             AS patientName,
+            --idCardNo	req	String	否	身份证号码*/
+            clr.IDNO                             AS idCardNo,
+            --bookingNo	req	String	否	HIS预约订单号/当天挂号锁号ID*/
+            -- AS bookingNo,
+            --doctorId	req	String	否	医生ID*/
+            to_char(clr.REGDOCTOR)               AS doctorId,
+            --orderStatus	req	String	否	挂号状态：* 0：未取号 * 1：已取号* 2：已退费(已取号)* 3: 已就诊* 4：未付费取消* 5: 已付费已取消* 6: 允许预约报到* 7：已爽约* */
+            DECODE(clr.ENCOUNTERSTATUS)  AS orderStatus,
+
+        --/**status 是否已取号：（当处理结果代码为0时，该字段必输） 0：未取号 1：已取号 2：已退费(已取号) 3: 已就诊4：未付费取消 5: 已付费已取消  6: 允许预约报到 7：已爽约8：可签到（需为已支付）  9：已签到
+       case
+            when clr.isCharge = '0' and clr.BOOKSTATUS = 4 then '4'
+            when clr.isCharge = '1' and clr.BOOKSTATUS = 4 then '5'
+            when clr.ISBOOK = '1' and clr.isCharge = '0' and clr.bookStatus = 1 then '6'
+            when clr.ISBOOK = '1' and clr.bookStatus = 3 then '7'
+            when clr.ISBOOK = '1' and clr.isCharge = '1' and clr.bookStatus = 1 then '8'
+            when clr.ISBOOK = '1' and clr.bookStatus = 2 then '9'
+            when clr.encounterStatus = 2 and vis.VISITSTATUS then '3'
+           end AS status,
+        --/**healthCardNo	orderInfo	String	是	患者卡号*/
+        clr.HCNO                             AS healthCardNo,
+        --/**patientName	orderInfo	String	是	患者姓名*/
+        clr.NAME                             AS patientName,
+        --/**patientId	orderInfo	String	是	患者ID*/
+        to_char(clr.PATIENTID)               AS patientId,
+        --/**orderId	orderInfo	String	是	移动订单号*/
+        clr.BOOKID AS orderId,
+        --/**bookingNo	orderInfo	String	是	HIS预约订单号/当天挂号锁号ID*/
+        to_char(clr.ENCOUNTERID)             AS bookingNo,
+        --/**clinicSeq	orderInfo	String	是	就诊流水号*/
+        to_char(clr.ENCOUNTERID)             AS clinicSeq,
+        --/**hospitalId	orderInfo	String	否	医院代码 第三方挂的号要在服务平台支付，则该参数必传*/
+        --AS hospitalId,
+        --/**deptId	orderInfo	String	是	科室代码*/
+        to_char(clr.REGDEPT) AS deptId,
+        --/**deptName	orderInfo	String	是	科室名称*/
+        (select DEPTNAME from OM_DEPARTMENT where DEPTID = clr.REGDEPT)AS deptName,
+        --/**doctorId	orderInfo	String	否	接诊医生代码*/
+        to_char(clr.REGDOCTOR)               AS doctorId,
+        --/**doctorName	orderInfo	String	否	接诊医生姓名*/
+        (select USERNAME from SM_USER where USERID = clr.REGDOCTOR)AS doctorName,
+        --/**regDate	orderInfo	String 	否	就诊日期*/
+        to_char(clr.REGTIME, 'yyyy-MM-dd')   AS regDate,
+        --/**shiftCode	orderInfo	String	否	班别代码*/
+        --AS shiftCode,
+        --/**shiftName	orderInfo	String	否	班别名称，如上午、下午*/
+        --AS shiftName,
+        --/**startTime	orderInfo	String	否	分时开始时间，格式：HH:MI*/
+        --AS startTime,
+        --/**endTime	orderInfo	String	否	分时结束时间，格式：HH:MI*/
+        --AS endTime,
+        --/**svObjectId	orderInfo	String	否	服务对象id，默认为普通患者*/
+        --AS svObjectId,
+        --/**svObjectName	orderInfo	String	否	患者服务对象(人群 )*/
+        --AS svObjectName,
+        --/**scheduleId	orderInfo	String	否	排班号*/
+        --AS scheduleId,
+        --/**roomAddress	orderInfo	String	否	出诊位置*/
+        --AS roomAddress,
+        --/**registerType	orderInfo	String	是	挂号类型 0-预约挂号 1-当天挂号*/
+        decode(clr.REGTYPE, 6,'1','0')AS registerType,
+        --/**queueNo	orderInfo	String	是	排队序号*/
+        to_char(vis.dayDeptNo)AS queueNo,
+        --/**waitingCount	orderInfo	Sring	否	前面就诊人数，如果患者已就诊，则设为-1*/
+        --AS waitingCount,
+        --/**waitingTime	orderInfo	Sring	否	预计候诊等待时间(分钟) 例:1患者就诊设置3分分钟，10个患者预计候诊30分钟*/
+        --AS waitingTime,
+        --/**infoTime	orderInfo	String	否	取号时间格式： YYYY-MM-DD HI24:MI:SS*/
+        --AS infoTime,
+        --/**visitTime	orderInfo	String	否	就诊时间（实际接诊时间） YYYY-MM-DD HI24:MI:SS*/
+        --AS visitTime,
+        --/**orderType	orderInfo	String	是	挂号来源 10-金蝶微信 11-金蝶支付宝（其他渠道的值his自定义）*/
+        '-' AS orderType,
+        --/**orderTypeName	orderInfo	String	否	挂号来源名称*/
+        --AS orderTypeName,
+        --/**orderTime	orderInfo	String	是	挂号下单时间*/
+        to_char(clr.INPUTTIME, 'yyyy-MM-dd hh:mm:ss') AS orderTime,
+        --/**remark	orderInfo	String	否	备注*/
+        --AS remark,
+        --/**isCancelabe	orderInfo	String	是	是否可以取消，0-不可以，1-可以，2-未定义，移动平台可根据自己的规则控制。*/
+        '2'AS isCancelabe,
+        --/**isPayment 	orderInfo	String	否	是否允许支付【0-不允许；1-允许】 默认值为1*/
+        --AS isPayment ,
+        --/**payStatus	orderInfo	String	是	支付状态 0-未支付 1-已支付 2-已退费*/
+        --AS payStatus,
+        --/**regFee	orderInfo	String	是	挂号费(单位“分”)*/
+        --AS regFee,
+        --/**treatFee	orderInfo	String	是	诊疗费(单位“分”)*/
+        --AS treatFee,
+        --/**yhFee	orderInfo	String	是	优惠挂号费(单位“分”)*/
+        --AS yhFee,
+        --/**payFee	orderInfo	String	是	实际支付费用(单位“分”) payFee = regFee + treatFee - yhFee*/
+        --AS payFee,
+        --/**isSelectSvObject	orderInfo	String	否	是否允许选择服务对象  0-不允许，1-允许默认值为0,该参数只针对第三方渠道的挂号订单，在支付前选择服务对象。*/
+        --AS isSelectSvObject,
+        --/**autoLockBeforePay	orderInfo	String	否	挂号支付前，是否必须先锁号  0-不允许，1-允许默认值为0，该参数只针对第三方渠道的挂号订单。*/
+        --AS autoLockBeforePay,
+        --
+        from PA_CL_DATA_REGISTER clr ,PA_CL_DATA_VISITQUEUE vis
+        where clr.ENCOUNTERID = vis.ENCOUNTERID(+)
+            <if test=" healthCardNo!=null and healthCardNo !=''">
+                AND clr.HCNO = #{healthCardNo}
+            </if>
+            <if test=" clinicSeq!=null and clinicSeq !=''">
+                AND clr.ENCOUNTERID = #{clinicSeq}
+            </if>
+            <if test=" patientId!=null and patientId !=''">
+                AND clr.PATIENTID = #{patientId}
+            </if>
+            <if test=" orderId!=null and orderId !=''">
+                AND clr.BOOKID = #{orderId}
+            </if>
+            <if test=" orderDate!=null and orderDate !=''">
+                AND   to_char(clr.INPUTTIME, 'yyyy-MM-dd') = #{orderDate}
+            </if>
+            <if test=" visitDate!=null and visitDate !=''">
+                AND to_char(clr.REGTIME, 'yyyy-MM-dd') = #{visitDate}
+            </if>
+            <if test=" patientName!=null and patientName !=''">
+                AND clr.NAME = #{patientName}
+            </if>
+            <if test=" idCardNo!=null and idCardNo !=''">
+                AND clr.IDNO = #{idCardNo}
+            </if>
+
+            <if test=" bookingNo!=null and bookingNo !=''">
+
+            </if>
+            <if test=" doctorId!=null and doctorId !=''">
+                AND to_char(clr.REGDOCTOR)  = #{doctorId}
+            </if>
+            <if test=" orderStatus!=null and orderStatus !=''">
+                AND clr.ENCOUNTERSTATUS = #{orderStatus}
+            </if>
+
     </select>
 
 </mapper>
