@@ -41,6 +41,17 @@ public interface NucleicAcid {
     OutpatientInfoOut getOutpatientInfo(OutpatientInfoIn outpatientInfoIn);
 
     /**
+     * 2.2.1.1 门诊出诊科室信息查询
+     * 接口代码	appointment.getDeptInfo
+     * 说明	通过本接口获取指定日期范围内的门诊可预约科室列表信息。
+     * deptId和deptType不会同时传值
+     * deptId或deptType不为空时，查询指定的科室列表信息；
+     * deptId和deptType均为空时，查询全部科室列表信息；
+     * @param xmlToPojo
+     * @return
+     */
+    ResultOut<GetDeptInfoAppOutSet> getDeptInfoApp(GetDeptInfoIn xmlToPojo);
+    /**
      * 2.2.4.1 在线建卡
      * 接口代码	user.createNewPatient
      * 说明	可以通过本接口在HIS系统中创建新的患者档案
@@ -108,7 +119,6 @@ public interface NucleicAcid {
      * 说明	通过调用该接口获取用户已缴费记录的详细信息。
      */
     GetCompletedPayDetailInfoOut getCompletedPayDetailInfo(GetCompletedPayDetailInfoIn getCompletedPayDetailInfoIn);
-
 
 
 }

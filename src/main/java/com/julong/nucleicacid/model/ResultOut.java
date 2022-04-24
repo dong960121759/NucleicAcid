@@ -18,7 +18,8 @@ import java.util.List;
         GetCompletedPayInfoOutSet.class,
         GetDoctorInfoOutSet.class,
         GetDeptInfoOutSet.class,
-        GetRegisterInfoOutSet.class
+        GetRegisterInfoOutSet.class,
+        GetDeptInfoAppOutSet.class
 })
 @XmlAccessorType(XmlAccessType.FIELD)
 public class ResultOut<T> {

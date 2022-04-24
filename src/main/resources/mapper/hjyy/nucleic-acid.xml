@@ -750,5 +750,35 @@
             </if>
 
     </select>
+    <select id="getDeptInfoApp" resultType="com.julong.nucleicacid.model.GetDeptInfoAppOutSet"
+    parameterType="com.julong.nucleicacid.model.GetDeptInfoIn">
+        select
+        --deptId	deptInfo	String	是	科室代码*/
+        to_char(dept.DEPTID)AS  deptId,
+        --deptName	deptInfo	String	是	科室名称*/
+        dept.DEPTNAME AS  deptName,
+        --deptType	deptInfo	Integer	是	1专科2 专家*/
+        '-' AS  deptType,
+        --parentId	deptInfo	String	是	上级科室代码,没有填-1*/
+        to_char(dept.parentID) AS  parentId,
+        --description	deptInfo	String	是	科室简介 */
+        '-' AS  description,
+        --orderNo	deptInfo	String	否	排序号
+        dept.SORT AS orderNo,
+        --keyDeptLevel	deptInfo	String	否	重点科室标示
+        --01，国家临床重点专科；
+        --02，国家区域中医诊疗中心；
+        --03，国家中医重点专科；
+        --04，省重点中医专科
+        '-' AS keyDeptLevel
+        from OM_DEPARTMENT dept
+        where dept.ISDELETE = '0'
+        <if test=" deptId!=null and deptId !=''">
+            AND dept.DEPTID = #{deptId}
+        </if>
+        <if test=" deptType!=null and deptType !=''">
+
+        </if>
+    </select>
 
 </mapper>

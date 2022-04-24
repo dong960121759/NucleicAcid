@@ -180,4 +180,15 @@ public interface NucleicAcidMapper {
      * @return
      */
     List<GetRegisterInfoOutSet> getRegisterInfoIn(GetRegisterInfoIn registerInfoIn);
+    /**
+     * 2.2.1.1 门诊出诊科室信息查询
+     * 接口代码	appointment.getDeptInfo
+     * 说明	通过本接口获取指定日期范围内的门诊可预约科室列表信息。
+     * deptId和deptType不会同时传值
+     * deptId或deptType不为空时，查询指定的科室列表信息；
+     * deptId和deptType均为空时，查询全部科室列表信息；
+     * @param getDeptInfoIn
+     * @return
+     */
+    List<GetDeptInfoAppOutSet> getDeptInfoApp(GetDeptInfoIn getDeptInfoIn);
 }

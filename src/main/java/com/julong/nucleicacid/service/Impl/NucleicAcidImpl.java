@@ -279,6 +279,35 @@ public class NucleicAcidImpl implements NucleicAcid {
     }
 
     /**
+     * 2.2.1.1 门诊出诊科室信息查询
+     * 接口代码	appointment.getDeptInfo
+     * 说明	通过本接口获取指定日期范围内的门诊可预约科室列表信息。
+     * deptId和deptType不会同时传值
+     * deptId或deptType不为空时，查询指定的科室列表信息；
+     * deptId和deptType均为空时，查询全部科室列表信息；
+     *
+     * @param getDeptInfoIn
+     * @return
+     */
+    @Override
+    public ResultOut<GetDeptInfoAppOutSet> getDeptInfoApp(GetDeptInfoIn getDeptInfoIn) {
+        ResultOut<GetDeptInfoAppOutSet> returnFO= new ResultOut<>();
+        returnFO.setResultCode(KingDeeCodeInfo.FAILED);
+        List<GetDeptInfoAppOutSet> getDeptInfoAppOutSets = nucleicAcidMapper.getDeptInfoApp(getDeptInfoIn);
+        if (getDeptInfoAppOutSets!=null && getDeptInfoAppOutSets.size()>0) {
+
+            returnFO.setSet(getDeptInfoAppOutSets);
+
+            returnFO.setResultCode(KingDeeCodeInfo.SUCCESS);
+            returnFO.setResultDesc("") ;
+        }else {
+            returnFO.setResultCode(KingDeeCodeInfo.FAILED);
+            returnFO.setResultDesc("查询核酸检测预约项目类型失败！") ;
+        }
+        return returnFO;
+    }
+
+    /**
      * 2.2.4.1 在线建卡
      * 接口代码	user.createNewPatient
      * 说明	可以通过本接口在HIS系统中创建新的患者档案
@@ -301,14 +330,14 @@ public class NucleicAcidImpl implements NucleicAcid {
             QueryWrapper<PatientinfoFO> queryWrapper = new QueryWrapper<>();
             queryWrapper.eq("ISDELETE", "0");
             queryWrapper.eq("IDNO", newPatientIn.getIdCardNo().trim());
-            queryWrapper.eq("NAME", newPatientIn.getPatientName().trim());
+            //queryWrapper.eq("NAME", newPatientIn.getPatientName().trim());
             System.out.println(newPatientIn.getPatientName().trim());
             List<PatientinfoFO> list = patientinfoFOMapper.selectList(queryWrapper);
             System.out.println(list.size());
             if (list.size() > 0) {
                 newPatientOut = new CreateNewPatientOut();
-                newPatientOut.setResultCode(KingDeeCodeInfo.SUCCESS);
-                newPatientOut.setResultDesc("成功-该身份证号病人已建卡!") ;
+                newPatientOut.setResultCode(KingDeeCodeInfo.FAILED);
+                newPatientOut.setResultDesc("该身份证号病人已存在!") ;
                 newPatientOut.setPatientId(String.valueOf(list.get(0).getPatientid()));
                 newPatientOut.setHealthCardNo(String.valueOf(list.get(0).getHcno()));
                 return newPatientOut;
