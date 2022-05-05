@@ -3,6 +3,7 @@ package com.julong.nucleicacid.entity;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.baomidou.mybatisplus.extension.activerecord.Model;
 import lombok.Data;
 
 import java.io.Serializable;
@@ -14,7 +15,7 @@ import java.util.Date;
 
 @Data
 @TableName("PC_CL_DATA_RECIPEENTRY")
-public class ClRecentryFO  extends Model<>  implements Serializable {
+public class ClRecentryFO  extends Model<ClRecentryFO> implements Serializable {
 
     public ClRecentryFO() {
         isupload = "0";

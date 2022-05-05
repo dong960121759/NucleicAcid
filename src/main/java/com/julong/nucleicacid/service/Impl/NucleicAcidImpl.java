@@ -62,7 +62,8 @@ public class NucleicAcidImpl implements NucleicAcid {
     private String _noteFS;
     @Value("${_noteJY}")
     private String _noteBC;
-
+    @Value("${_defaultIPsfcID}")
+    private Long  _defaultIPsfcID ;//住院收费处地点
 
     private final SimpleDateFormat _formatDate_his = new SimpleDateFormat("yyyy-MM-dd");
     private final SimpleDateFormat _formatDateTime_wx = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
@@ -284,12 +285,33 @@ public class NucleicAcidImpl implements NucleicAcid {
      * 说明	通过本接口查询患者历次住院基本信息。
      * healthCardNo、inpatientId两者不会同时为空，至少会有一个。
      *
-     * @param xmlToPojo
+     * @param infoIn
      * @return
      */
     @Override
-    public ResultOut<InPatientInfoOutSet> getInpatientInfo(InpatientInfoIn xmlToPojo) {
-        return null;
+    public ResultOut<InPatientInfoOutSet> getInpatientInfo(InpatientInfoIn infoIn) {
+
+        ResultOut<InPatientInfoOutSet> returnFO= new ResultOut<>();
+        returnFO.setResultCode(KingDeeCodeInfo.FAILED);
+
+        if( infoIn.getInpatientId()==null && infoIn.getHealthCardNo()==null){
+
+            returnFO.setResultCode(KingDeeCodeInfo.FAILED);
+            returnFO.setResultDesc("healthCardNo、inpatientId不能同时为空!");
+            return returnFO;
+        }
+        List<InPatientInfoOutSet> inPatientInfoOutSets = nucleicAcidMapper.getInpatientInfo(infoIn);
+        if (inPatientInfoOutSets!=null && inPatientInfoOutSets.size()>0) {
+
+            returnFO.setSet(inPatientInfoOutSets);
+
+            returnFO.setResultCode(KingDeeCodeInfo.SUCCESS);
+            returnFO.setResultDesc("") ;
+        }else {
+            returnFO.setResultCode(KingDeeCodeInfo.FAILED);
+            returnFO.setResultDesc("未查询到住院患者信息！") ;
+        }
+        return returnFO;
     }
 
     /**
@@ -1269,6 +1291,182 @@ public class NucleicAcidImpl implements NucleicAcid {
 
         return detailInfoOut;
     }
+
+    /**
+     * 2.2.8.1 住院预交金缴纳
+     * 接口代码	inpatient.doPrepay
+     * 说明	患者在完成支付之后，通过调用本接口完成住院预交金缴纳的业务流程。
+     *
+     * @param doPrepayIn
+     * @return
+     */
+    @Override
+    public DoPrepayOut doPrepay(DoPrepayIn doPrepayIn) {
+        DoPrepayOut returnFO = new DoPrepayOut();
+        returnFO.setResultCode(KingDeeCodeInfo.FAILED);
+        BigDecimal amt = new BigDecimal(0);
+        if( (doPrepayIn.getData().getInpatientId() == null || "".equals(doPrepayIn.getData().getInpatientId().trim()) )) {
+            returnFO.setResultDesc("住院号和住院流水号不能为空!"); ;
+            return returnFO;
+        }
+
+        if(doPrepayIn.getData().getTradeNo() == null || "".equals(doPrepayIn.getData().getTradeNo().trim()) ) {
+            returnFO.setResultDesc("支付流水号不能为空!"); ;
+            return returnFO;
+        }
+        if(doPrepayIn.getData().getPayAmout() == null || "".equals(doPrepayIn.getData().getPayAmout().trim()) ) {
+            returnFO.setResultDesc("请输入正确的金额，金额不能为空！") ;
+            return returnFO;
+        }else {
+            amt = new BigDecimal(doPrepayIn.getData().getPayAmout());
+            amt = amt.divide(new BigDecimal(100), 2, BigDecimal.ROUND_HALF_UP);
+            if (amt.compareTo(new BigDecimal(0))<1){
+                returnFO.setResultDesc("请输入正确的金额，金额不能小于等于0元!") ;
+                return returnFO;
+            }
+        }
+        Long payCode = null ;
+        String payMethod = "";
+        //取系统设置
+        if ( KingDeeCodeInfo.PAYMODE_98.equals(doPrepayIn.getData().getPayMode()) ) {
+            payCode = _defaultWxPayID;
+            payMethod = "KengDeeWeixin";
+        }else if ( KingDeeCodeInfo.PAYMODE_99.equals(doPrepayIn.getData().getPayMode()) ) {
+            payCode = _defaultZfbPayID;
+            payMethod = "KengDeeAlipay";
+        } else {
+            returnFO.setResultDesc("传入参数:支付方式错误! 值应该为") ;
+            return returnFO;
+        }
+        PaIpRegisterFO selectFO = new PaIpRegisterFO();
+        PaIpRegisterFO ipRegisterFO= selectFO.selectById(doPrepayIn.getData().getInpatientId());
+        if(ipRegisterFO == null){
+            returnFO.setResultDesc("找不到相应的住院信息 !") ;
+            return returnFO;
+        }
+        PatientinfoFO selectFO1 = new PatientinfoFO();
+        PatientinfoFO patientinfoFO = selectFO1.selectById(doPrepayIn.getData().getPatientId());
+        if(patientinfoFO == null){
+            returnFO.setResultDesc("找不到相应的病人基本信息 !") ;
+            return returnFO;
+        }
+        if( "1".equals( ipRegisterFO.getIsmedicalcharge() ) ){
+            returnFO.setResultDesc("该病人已定义出院，不能补缴押金 !" + ipRegisterFO.getIsmedicalcharge()+" , " + ipRegisterFO.getName() ) ;
+            return returnFO;
+        }
+
+        Calendar cal = Calendar.getInstance();
+        //插入押金
+        AbIpDepositFO ipDepositFO = new AbIpDepositFO() ;
+        ipDepositFO.setDepositid(smOidGenerate("AB_IP_DATA_DEPOSIT"));
+        ipDepositFO.setDepositno( "WX"+ipDepositFO.getDepositid() ) ;
+        ipDepositFO.setPatientid(patientinfoFO.getPatientid()) ;
+        ipDepositFO.setEncounterid( ipRegisterFO.getEncounterid() ) ;
+        ipDepositFO.setPaymentid(payCode) ;
+        ipDepositFO.setRate( new BigDecimal(1) ) ;
+        ipDepositFO.setAmount(amt) ;
+        ipDepositFO.setDeposittime( cal.getTime() ) ;
+        ipDepositFO.setDepositoper( _defaultWxUserID ) ;
+        ipDepositFO.setDepositloc(_defaultIPsfcID ) ;
+        ipDepositFO.setDepositstatus( new Long("1") ) ;
+        ipDepositFO.setIsbalance("0") ;
+        ipDepositFO.setVersionid( cal.getTime()) ;
+        ipDepositFO.setIpno(ipRegisterFO.getIpno()) ;
+
+        ipDepositFO.insert();
+        //ipDepositFO.setDepositno( "WX"+ipDepositFO.getDepositid() ) ;
+
+        //插入移动支付表
+        HcMobilePaymentFO hcMobilePaymentFO = new HcMobilePaymentFO() ;
+        hcMobilePaymentFO.setChrgNo(ipDepositFO.getDepositid().toString() ) ;
+        hcMobilePaymentFO.setType("2") ;
+        hcMobilePaymentFO.setPatCardNo(patientinfoFO.getGpno());
+        hcMobilePaymentFO.setHisOrdNum( ipDepositFO.getDepositid().toString() );
+        hcMobilePaymentFO.setPsOrdNum(doPrepayIn.getData().getTradeNo());
+        hcMobilePaymentFO.setPayMode(payMethod);
+        hcMobilePaymentFO.setAgtOrdNum(doPrepayIn.getData().getOrderId());
+        hcMobilePaymentFO.setPayAmt(amt);
+
+        hcMobilePaymentFO.setPayTime(doPrepayIn.getData().getOrderTime());
+        hcMobilePaymentFO.setAdmissionNum(ipRegisterFO.getIpno());
+        hcMobilePaymentFO.setName(patientinfoFO.getName()) ;
+
+        hcMobilePaymentFO.setRecPayAmt(amt) ;
+        hcMobilePaymentFO.setInvoiceNo(ipDepositFO.getDepositid().toString() ) ;
+
+        if(hcMobilePaymentFO.getPayTime() == null || "".equals(hcMobilePaymentFO.getPayTime().trim())){
+            hcMobilePaymentFO.setPayTime(_formatDateTime_wx.format(cal.getTime())) ;
+        }
+
+        hcMobilePaymentFO.insert();	//保存hc_MobilePayment
+
+        returnFO.setResultCode(KingDeeCodeInfo.SUCCESS);
+        returnFO.setResultDesc("");
+        returnFO.setReceiptId(ipDepositFO.getDepositid().toString());
+        returnFO.setBalance(doPrepayIn.getData().getPayAmout());
+        return returnFO;
+    }
+
+    /**
+     * 2.2.8.2 预交金查询
+     * 接口	inpatient.getPrepayRecord
+     * 说明	通过调用本接口查询患者预交金的有效记录（需考虑预交金状态）
+     *
+     * @param prepayRecordIn
+     * @return
+     */
+    @Override
+    public ResultOut<GetPrepayRecordOutSet> getPrepayRecord(GetPrepayRecordIn prepayRecordIn) {
+        ResultOut<GetPrepayRecordOutSet> returnFO = new ResultOut<>();
+        returnFO.setResultCode(KingDeeCodeInfo.FAILED);
+        if (prepayRecordIn.getInpatientId()==null || "".equals(prepayRecordIn.getInpatientId())){
+            returnFO.setResultDesc("住院流水号不能为空!");
+            return returnFO;
+         }
+        List<GetPrepayRecordOutSet> prepayRecordOutSets = nucleicAcidMapper.getPrepayRecord(prepayRecordIn);
+
+        if (prepayRecordOutSets!=null && prepayRecordOutSets.size()>0){
+            for (GetPrepayRecordOutSet prepayRecordOutSet: prepayRecordOutSets){
+                BigDecimal payAmt = new BigDecimal(prepayRecordOutSet.getPayAmout()).multiply(new BigDecimal(100));
+                prepayRecordOutSet.setPayAmout(payAmt.toString());
+            }
+            returnFO.setResultCode(KingDeeCodeInfo.SUCCESS);
+            returnFO.setSet(prepayRecordOutSets);
+        }else{
+            returnFO.setResultCode(KingDeeCodeInfo.FAILED);
+            returnFO.setResultDesc("未找到预交金！");
+        }
+
+        return returnFO;
+
+    }
+
+    /**
+     * 2.2.8.3 住院费用每日清单查询
+     * 接口	inpatient.getDailyBill
+     * 说明	通过调用本接口查询患者住院期间指定某一天的费用明细清单
+     *
+     * @param dailyBillIn
+     * @return
+     */
+    @Override
+    public GetDailyBillOut getDailyBill(GetDailyBillIn dailyBillIn) {
+        GetDailyBillOut dailyBillOut = new GetDailyBillOut();
+        dailyBillOut.setResultCode(KingDeeCodeInfo.FAILED);
+        if(dailyBillIn.getInpatientId() == null || "".equals(dailyBillIn.getInpatientId().trim()) ){
+            dailyBillOut.setResultDesc("传入参数中住院流水号 有空!") ;
+            return dailyBillOut;
+        }
+
+        if(dailyBillIn.getBillDate() == null || "".equals(dailyBillIn.getBillDate().trim()) ){
+            dailyBillOut.setResultDesc("传入参数中 日期 有空!") ;
+            return dailyBillOut;
+        }
+        dailyBillOut = nucleicAcidMapper.getDailyBill(dailyBillIn);
+
+        return null;
+    }
+
     private String getHisPayNo(String recNoList,Long patientId){
             // 判断是否有KEYNO，若无则新生成hispayno 和 加记录
             String hispaynoKey = DigestUtils.md5Hex(recNoList).toUpperCase(); // MD5（hispayno）

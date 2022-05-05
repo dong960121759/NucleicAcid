@@ -137,5 +137,30 @@ public interface NucleicAcid {
      */
     GetCompletedPayDetailInfoOut getCompletedPayDetailInfo(GetCompletedPayDetailInfoIn getCompletedPayDetailInfoIn);
 
+    /**
+     *2.2.8.1 住院预交金缴纳
+     * 接口代码	inpatient.doPrepay
+     * 说明	患者在完成支付之后，通过调用本接口完成住院预交金缴纳的业务流程。
+     * @param doPrepayIn
+     * @return
+     */
+    DoPrepayOut doPrepay(DoPrepayIn doPrepayIn);
 
+    /**
+     * 2.2.8.2 预交金查询
+     * 接口	inpatient.getPrepayRecord
+     * 说明	通过调用本接口查询患者预交金的有效记录（需考虑预交金状态）
+     * @param xmlToPojo
+     * @return
+     */
+    ResultOut<GetPrepayRecordOutSet> getPrepayRecord(GetPrepayRecordIn xmlToPojo);
+
+    /**
+     * 2.2.8.3 住院费用每日清单查询
+     * 接口	inpatient.getDailyBill
+     * 说明	通过调用本接口查询患者住院期间指定某一天的费用明细清单
+     * @param xmlToPojo
+     * @return
+     */
+    GetDailyBillOut getDailyBill(GetDailyBillIn xmlToPojo);
 }

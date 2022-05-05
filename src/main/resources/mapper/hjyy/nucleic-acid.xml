@@ -895,5 +895,141 @@
 
 
     </select>
+    <select id="getInpatientInfo" resultType="com.julong.nucleicacid.model.InPatientInfoOutSet"
+        parameterType="com.julong.nucleicacid.model.InpatientInfoIn">
+        --2.1.2.2 住院患者信息查询
+        select
+        --patientId	recordInfo	String	是	住院患者唯一ID
+        to_char(ipr.PATIENTID) AS patientId,
+        --hospitalId	recordInfo	String	是	院区代码
+        '-' AS hospitalId,
+        --patientName	recordInfo	String	是	姓名
+        ipr.NAME AS patientName,
+        --inTime	recordInfo	String	是	入院日期
+        to_char(ipr.INDATE, 'yyyy-MM-dd') AS inTime,
+        --outTime	recordInfo	String	是	出院日期(未出院，为空)
+        to_char(ipr.OUTDATE, 'yyyy-MM-dd') AS outTime,
+        --inDays	recordInfo	String	是	住院天数
+        to_char(ipr.ipCount) AS inDays,
+        --patientFlag	recordInfo	String	是	患者状态:在院/预出院/结账/出院/清账
+        decode(ipr.ENCOUNTERSTATUS, 2,'在院',3,'出院') AS patientFlag,
+        --totalAmout	recordInfo	String	是	总费用（单位分）
+        ( select nvl(sum(b.AMOUNT),0) from AB_IP_DATA_BILL b where b.encounterid = ipr.encounterid  ) AS totalAmout,
+        --prepayAmout	recordInfo	String	是	预交金额（单位分）
+        ( select nvl(sum( d.amount ),0) from AB_IP_DATA_DEPOSIT d where  d.encounterid = ipr.encounterid and d.depositStatus = 1 ) as prepayAmout,
+        --balance	recordInfo	String	是	预交金余额（单位分）
+        ( select nvl(sum( d.amount ),0) from AB_IP_DATA_DEPOSIT d where  d.encounterid = ipr.encounterid and d.depositStatus in ( 1 , 3 ) ) as balance,
+        --settled	recordInfo	String	否	已结算总额（单位分）
+        '' AS settled,
+        --inpatientId	recordInfo	String	是	住院号
+        ipr.ENCOUNTERID AS inpatientId,
+        --idCardNo	recordInfo	String	否	患者身份证件号码
+        ipr.IDNO AS idCardNo,
+        --deptId	recordInfo	String	是	病区代码
+        to_char(ipr.INDEPT) AS deptId,
+        --deptName	recordInfo	String	是	病区
+        nvl( (select DEPTNAME from om_department  where deptid = ipr.indept and rownum &lt; 2 ),'无') as deptName,
+        --bedNo	recordInfo	String	否	床位
+        nvl( (select to_char(bedid) from PA_IP_DATA_WARDPATIENT where encounterid = ipr.encounterid and ISCURRENT = '1' and rownum  &lt; 2 ),'无') as bedNo,
+        --chargeDoctorId	recordInfo	String	是	主管医生代码
+        to_char(ipr.inDoctor) AS chargeDoctorId,
+        --chargeDoctorName	recordInfo	String	是	主管医生姓名
+        (select USERNAME from SM_USER where USERID = ipr.inDoctor)AS chargeDoctorName,
+        --chargeNurseId	recordInfo	String	是	主管护士代码
+        to_char(ipw.RESPONSENURSE) AS chargeNurseId,
+        --chargeNurseName	recordInfo	String	是	主管护士姓名
+        (select USERNAME from SM_USER where USERID = ipw.RESPONSENURSE)AS chargeNurseName,
+        --gender	recordInfo	String	否	性别（男、女）
+        (Select dictname from sm_dictionary where dicttype=4 and OID =  ipr.SEX) AS gender,
+        --birthday	recordInfo	String	否	出生日期
+        to_char(ipr.BIRTHDAY, 'yyyy-MM-dd') AS birthday,
+        --address	recordInfo	String	否	家庭地址
+        ipr.CENSUSADDR AS address,
+        --connectPhone	recordInfo	String	否	联系电话（患者电话）
+        ipr.MOBILE AS connectPhone,
+        --relatePerson	recordInfo	String	否	联系人
+        ipr.contact AS relatePerson,
+        --relation	recordInfo	String	否	联系人关系（文字）
+        (select relationName from Pa_Relation where ISDELETE = '0' and RELATIONID = ipr.relation) AS relation,
+        --relatePhone	recordInfo	String	否	联系人电话
+        ipr.contactTele AS relatePhone,
+        --remark	recordInfo	String	否	备注
+        '-'AS remark,
+        --isReadyCopy	recordInfo	String	否	是否允许复印
+        '' AS isReadyCopy
+        from PA_IP_DATA_REGISTER ipr, PA_IP_DATA_WARDPATIENT ipw
+        WHERE ipr.ENCOUNTERID = ipw.ENCOUNTERID and ipr.isdelete = '0'
+        <if test=" healthCardNo!=null and healthCardNo !=''">
+            AND ipr.HCNO = #{healthCardNo}
+        </if>
+        <if test=" patientId!=null and patientId !=''">
+            AND to_char(ipr.PATIENTID) = #{patientId}
+        </if>
+        <if test=" idCardNo!=null and idCardNo !=''">
+            AND ipr.IDNO = #{idCardNo}
+        </if>
+        <if test=" inpatientId!=null and inpatientId !=''">
+            AND to_char(ipr.ENCOUNTERID) = #{inpatientId}
+        </if>
+
+    </select>
+    <select id="getPrepayRecord" resultType="com.julong.nucleicacid.model.GetPrepayRecordOutSet"
+    >
+    --2.2.8.2 预交金查询
+    select
+    --payTime	recordInfo	Stirng	是	交费日期
+    to_char(ipd.DEPOSITTIME,'yyyy-MM-dd') AS payTime,
+    --payAmout	recordInfo	Stirng	是	交费金额（单位分）
+    hcm.PAYAMT AS payAmout,
+    --payMode	recordInfo	String	是	支付方式：（在服务平台微信公众号缴费记录列表是直接显示本字段内容)
+    hcm.PAYMODE AS payMode,
+    --payFlag	recordInfo	Stirng	是	交款状态 正常/已清/已注销
+    decode(ipd.DEPOSITSTATUS,1,'正常',2,'已注销',3,'已清',4,'已清')as  payFlag,
+    --remark	recordInfo	String	否	备注
+    '' aS remark,
+    --orderId	recordInfo	String	否	订单号（住院预交金缴费记录项订单号生成二维码时必填）
+    hcm.AGTORDNUM AS orderId
+    from AB_IP_DATA_DEPOSIT ipd ,HC_MOBILEPAYMENT hcm
+    where TO_CHAR(ipd.DEPOSITID)  =  hcm.CHRGNO and hcm.TYPE = '2' and to_char(ipd.ENCOUNTERID) = #{inpatientId}
+
+    </select>
+    <resultMap id="getDailyBillMap" type="com.julong.nucleicacid.model.GetDailyBillOut">
+        <collection property="feeInfo" select="queryFeeInfo"/>
+    </resultMap>
+    <select id="getDailyBill" resultType="com.julong.nucleicacid.model.GetDailyBillOut">
+        --2.2.8.3 住院费用每日清单查询
+        select
+        --totalAmout	res	String	是	住院总费用（单位分）
+        (SELECT SUM(AMOUNT) from AB_IP_DATA_BILL  WHERE ENCOUNTERID = aib.ENCOUNTERID ) AS totalAmout,
+        --prepayAmout	res	Stirng	是	预交金额（单位分）
+        nvl((SELECT SUM(AMOUNT) from AB_IP_DATA_DEPOSIT ipd WHERE DEPOSITSTATUS = 1 and ENCOUNTERID = aib.ENCOUNTERID ),'0')AS prepayAmout,
+        --unsettled	res	Stirng	是	未结算总额（单位分）
+        nvl((SELECT SUM(AMOUNT) from AB_IP_DATA_BILL  WHERE ENCOUNTERID = aib.ENCOUNTERID  and ISCHARGE = '0'),'0')  AS unsettled,
+        --balance	res	Stirng	是	截止至上一日结存余额（单位分，正数为欠费，负数为结余）
+        (SELECT SUM(AMOUNT) from AB_IP_DATA_BILL  WHERE ENCOUNTERID = aib.ENCOUNTERID and TO_CHAR (BILLDATE, 'yyyy-MM-dd') &lt; TO_CHAR(aib.BILLDATE, 'yyyy-MM-dd'))-	nvl((SELECT SUM(AMOUNT) from AB_IP_DATA_DEPOSIT ipd WHERE DEPOSITSTATUS = 1 and ENCOUNTERID = aib.ENCOUNTERID ),0) AS balance,
+        --settled	res	Stirng	是	已结算总额（单位分）
+        nvl((SELECT SUM(AMOUNT) from AB_IP_DATA_BILL  WHERE ENCOUNTERID = aib.ENCOUNTERID  and ISCHARGE = '1'),'0') AS settled,
+        --billAmout	res	Stirng	是	本清单费用合计（单位分）
+        sum(aib.AMOUNT) AS billAmout,
+        --startMxseq	res	Stirng	否	费用明细开始序列
+        '' AS startMxseq,
+        --endMxseq	res	Stirng	否	费用明细结束序列
+        '' AS endMxseq,
+        --remark	res	String	否	备注
+        '' AS remark
+        --feeInfo	res	List	否	明细项目记录
+        --typeCode	feeInfo	Stirng	是	类型代码
+        to_char(o.IPINVOICECATAID) AS typeCode,
+        --typeName	feeInfo	Stirng	是	费用分类名称
+        (  Select cataname from AB_INVOICECATALOG where cataid = o.IPINVOICECATAID and rownum &lt; 2 ) as typeName,
+        --typeAmout	feeInfo	Stirng	是	费用分类金额
+        sum(i.amount) as feeTotal
+        --reimburseRatio	feeInfo	String	否	报销比例
+
+        from AB_IP_DATA_BILL aib
+        where  aib.encounterid = #{inpatientId} and  TO_CHAR (aib.BILLDATE, 'yyyy.mm.dd') = #{billDate}
+        GROUP BY aib.ENCOUNTERID,TO_CHAR (aib.BILLDATE, 'yyyy-MM-dd')
+        ORDER BY TO_CHAR (aib.BILLDATE, 'yyyy-MM-dd')
+    </select>
 
 </mapper>

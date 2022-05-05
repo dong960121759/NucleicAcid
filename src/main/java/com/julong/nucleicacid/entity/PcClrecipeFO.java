@@ -3,6 +3,7 @@ package com.julong.nucleicacid.entity;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.baomidou.mybatisplus.extension.activerecord.Model;
 import lombok.Data;
 
 import java.io.Serializable;
@@ -12,7 +13,7 @@ import java.util.Date;
 
 @Data
 @TableName("PC_CL_DATA_RECIPE")
-public class PcClrecipeFO  extends Model<>  implements Serializable {
+public class PcClrecipeFO  extends Model<PcClrecipeFO> implements Serializable {
 
     /**
      * HYHIS_PC_CL_DATA_RECIPE.RECIPEID type:NUMBER len:22 scale:0  Comments:

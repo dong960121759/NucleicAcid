@@ -7,12 +7,13 @@ import java.util.Date;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.baomidou.mybatisplus.extension.activerecord.Model;
 import lombok.Data;
 
 
 @Data
 @TableName("PA_CL_DATA_REGISTER")
-public class PaCLregisterFO  extends Model<>  implements Serializable{
+public class PaCLregisterFO  extends Model<PaCLregisterFO> implements Serializable{
 
 
 /**

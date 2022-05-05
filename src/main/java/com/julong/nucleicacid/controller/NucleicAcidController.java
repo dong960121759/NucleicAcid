@@ -51,7 +51,6 @@ public class NucleicAcidController {
             case "baseinfo.getInpatientInfo":
                 //2.1.2.2 住院患者信息查询
                 return XmlUtil.pojoToXml(nucleicAcidImpl.getInpatientInfo((InpatientInfoIn) XmlUtil.xmlToPojo(InpatientInfoIn.class, inXml)));
-
             //2.2.1	预约挂号
             case "appointment.getDeptInfo":
                 //2.2.1.1 门诊出诊科室信息查询
@@ -90,6 +89,18 @@ public class NucleicAcidController {
             case "outpatient.getCompletedPayDetailInfo":
                 //2.2.3.5 已缴费记录明细查询
                 return XmlUtil.pojoToXml((nucleicAcidImpl.getCompletedPayDetailInfo((GetCompletedPayDetailInfoIn) XmlUtil.xmlToPojo(GetCompletedPayDetailInfoIn.class, inXml))));
+
+            case "inpatient.doPrepay":
+                //2.2.8.1 住院预交金缴纳
+                return XmlUtil.pojoToXml((nucleicAcidImpl.doPrepay((DoPrepayIn) XmlUtil.xmlToPojo(DoPrepayIn.class, inXml))));
+            case "inpatient.getPrepayRecord":
+                //2.2.8.1 住院预交金缴纳
+                return XmlUtil.pojoToXml((nucleicAcidImpl.getPrepayRecord((GetPrepayRecordIn) XmlUtil.xmlToPojo(GetPrepayRecordIn.class, inXml))));
+            case "inpatient.getDailyBill":
+                //2.2.8.1 住院预交金缴纳
+                return XmlUtil.pojoToXml((nucleicAcidImpl.getDailyBill((GetDailyBillIn) XmlUtil.xmlToPojo(GetDailyBillIn.class, inXml))));
+
+
         }
         return XmlUtil.pojoToXml(wscResult);
     }

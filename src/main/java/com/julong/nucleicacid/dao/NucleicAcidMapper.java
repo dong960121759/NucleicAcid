@@ -201,4 +201,31 @@ public interface NucleicAcidMapper {
      * @return
      */
     List<GetScheduleInfoOutSet> getScheduleInfo(GetScheduleInfoIn scheduleInfoIn);
+    /**
+     * 2.1.2.2 住院患者信息查询
+     * 接口	baseinfo.getInpatientInfo
+     * 说明	通过本接口查询患者历次住院基本信息。
+     * healthCardNo、inpatientId两者不会同时为空，至少会有一个。
+     * @param infoIn
+     * @return
+     */
+    List<InPatientInfoOutSet> getInpatientInfo(InpatientInfoIn infoIn);
+    /**
+     * 2.2.8.2 预交金查询
+     * 接口	inpatient.getPrepayRecord
+     * 说明	通过调用本接口查询患者预交金的有效记录（需考虑预交金状态）
+     *
+     * @param prepayRecordIn
+     * @return
+     */
+    List<GetPrepayRecordOutSet> getPrepayRecord(GetPrepayRecordIn prepayRecordIn);
+    /**
+     * 2.2.8.3 住院费用每日清单查询
+     * 接口	inpatient.getDailyBill
+     * 说明	通过调用本接口查询患者住院期间指定某一天的费用明细清单
+     *
+     * @param dailyBillIn
+     * @return
+     */
+    GetDailyBillOut getDailyBill(GetDailyBillIn dailyBillIn);
 }
