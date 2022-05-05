@@ -39,7 +39,15 @@ public interface NucleicAcid {
      * @return
      */
     OutpatientInfoOut getOutpatientInfo(OutpatientInfoIn outpatientInfoIn);
-
+    /**
+     * 2.1.2.2 住院患者信息查询
+     * 接口	baseinfo.getInpatientInfo
+     * 说明	通过本接口查询患者历次住院基本信息。
+     * healthCardNo、inpatientId两者不会同时为空，至少会有一个。
+     * @param xmlToPojo
+     * @return
+     */
+    ResultOut<InPatientInfoOutSet> getInpatientInfo(InpatientInfoIn xmlToPojo);
     /**
      * 2.2.1.1 门诊出诊科室信息查询
      * 接口代码	appointment.getDeptInfo
@@ -51,6 +59,15 @@ public interface NucleicAcid {
      * @return
      */
     ResultOut<GetDeptInfoAppOutSet> getDeptInfoApp(GetDeptInfoIn xmlToPojo);
+    /**
+     * 2.2.1.2 医生出诊信息查询
+     *
+     * 接口代码	appointment.getScheduleInfo
+     * 说明	通过本接口获取获取某个科室或者某个医生在某个日期范围内的排班信息以及号源信息。如果传入searchCode，则优先使用searchCode进行搜索；如果searchCode为空，则deptId和doctorId不会同时为空
+     * @param xmlToPojo
+     * @return
+     */
+    ResultOut<GetScheduleInfoOutSet> getScheduleInfo(GetScheduleInfoIn xmlToPojo);
     /**
      * 2.2.4.1 在线建卡
      * 接口代码	user.createNewPatient

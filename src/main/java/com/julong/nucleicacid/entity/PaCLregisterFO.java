@@ -12,7 +12,7 @@ import lombok.Data;
 
 @Data
 @TableName("PA_CL_DATA_REGISTER")
-public class PaCLregisterFO implements Serializable{
+public class PaCLregisterFO  extends Model<>  implements Serializable{
 
 
 /**

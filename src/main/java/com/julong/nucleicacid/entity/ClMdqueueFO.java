@@ -3,6 +3,7 @@ package com.julong.nucleicacid.entity;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.baomidou.mybatisplus.extension.activerecord.Model;
 import lombok.Data;
 
 import java.io.Serializable;
@@ -11,7 +12,7 @@ import java.util.Date;
 
 @Data
 @TableName( "MA_CL_DATA_PHARMACYQUEUE")
-public class ClMdqueueFO implements Serializable {
+public class ClMdqueueFO extends Model<ClMdqueueFO> implements Serializable {
 	
 	public ClMdqueueFO() {
 		isincludedrip =  "0" ;

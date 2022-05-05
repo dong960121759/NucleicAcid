@@ -1,6 +1,7 @@
 package com.julong.nucleicacid.model;
 
 import lombok.Data;
+import org.springframework.ui.Model;
 
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;

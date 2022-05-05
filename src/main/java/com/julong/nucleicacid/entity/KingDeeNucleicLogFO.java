@@ -1,6 +1,7 @@
 package com.julong.nucleicacid.entity;
 
 import com.baomidou.mybatisplus.annotation.*;
+import com.baomidou.mybatisplus.extension.activerecord.Model;
 import lombok.Data;
 
 import java.io.Serializable;
@@ -12,7 +13,7 @@ import java.io.Serializable;
 @Data
 @TableName("CL_NUCLEICLOG_KINGDEE")
 
-public class KingDeeNucleicLogFO implements Serializable {
+public class KingDeeNucleicLogFO  extends Model<KingDeeNucleicLogFO> implements Serializable {
 
     @TableId(value = "OID")
     private Long oid;

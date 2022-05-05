@@ -764,21 +764,136 @@
         --description	deptInfo	String	是	科室简介 */
         '-' AS  description,
         --orderNo	deptInfo	String	否	排序号
-        dept.SORT AS orderNo,
+        to_char(dept.SORT) AS orderNo,
         --keyDeptLevel	deptInfo	String	否	重点科室标示
         --01，国家临床重点专科；
         --02，国家区域中医诊疗中心；
         --03，国家中医重点专科；
         --04，省重点中医专科
         '-' AS keyDeptLevel
-        from OM_DEPARTMENT dept
-        where dept.ISDELETE = '0'
+        from OM_DEPARTMENT dept , OM_DEPARTMENTVISIT depv
+        where dept.ISDELETE = '0' and dept.DEPTID = depv.DEPTID and depv.VISITTYPE in (1,2)
+
+
         <if test=" deptId!=null and deptId !=''">
             AND dept.DEPTID = #{deptId}
         </if>
         <if test=" deptType!=null and deptType !=''">
 
         </if>
+        GROUP BY dept.DEPTID,dept.DEPTNAME,dept.parentID,dept.SORT
+    </select>
+    <resultMap id="getScheduleInfoMap" type="com.julong.nucleicacid.model.GetScheduleInfoOutSet">
+        <collection property="scheduleInfo" ofType="com.julong.nucleicacid.model.GetScheduleInfo">
+            <result property="deptId" column="deptId"/>
+            <result property="deptName" column="deptName"/>
+            <result property="regDate" column="regDate"/>
+            <result property="shiftCode" column="shiftCode"/>
+            <result property="shiftName" column="shiftName"/>
+            <result property="startTime" column="startTime"/>
+            <result property="endTime" column="endTime"/>
+            <result property="scheduleId" column="scheduleId"/>
+            <result property="regStatus" column="regStatus"/>
+            <result property="regTotalCount" column="regTotalCount"/>
+            <result property="regLeaveCount" column="regLeaveCount"/>
+            <result property="regFee" column="regFee"/>
+            <result property="treatFee" column="treatFee"/>
+            <result property="isTimeReg" column="isTimeReg"/>
+            <result property="hasRegisterType" column="hasRegisterType"/>
+        </collection>
+    </resultMap>
+    <select id="getScheduleInfo" resultMap="getScheduleInfoMap" resultType="com.julong.nucleicacid.model.GetScheduleInfoOutSet"
+    parameterType="com.julong.nucleicacid.model.GetScheduleInfoIn">
+        select
+        --doctorId	regInfo	String	是	医生代码
+        to_char(us.USERID) AS doctorId,
+        --doctorName	regInfo	String	是	医生名称
+        us.NAME AS doctorName,
+        --doctorLevelCode	regInfo	String	是	医生职称代码
+        TO_CHAR(usin.RANKID) AS doctorLevelCode,
+        --doctorLevel	regInfo	String	是	医生职称
+        (select RANKNAME from OM_RANK where RANKID = usin.RANKID) AS doctorLevel,
+        --description	regInfo	String	否	医生简介
+        --affiliatedHospital	regInfo	String	否	医生所属医院
+        --registerMode	regInfo	String	否	挂号模式
+        --0：普通模式，需要及时支付确认
+        --1：审核模式：预约成功后，需要医生助手确认通过才能支付
+        --remark	regInfo	String	否	医生出诊信息备注
+        --deptAddress	scheduleInfo	String	否	出诊诊室地址
+
+
+
+        --deptId	scheduleInfo	String	是	科室代码
+        to_char(us.LOCID) AS deptId,
+        --deptName	scheduleInfo	String	是	科室名称
+        (select DEPTNAME from OM_DEPARTMENT where DEPTID = us.LOCID) AS deptName,
+        --roomAddress	scheduleInfo	String	否	出诊位置
+        --clinicUnitName	scheduleInfo	String	否	诊疗单元名称
+        --clinicUnitId	scheduleInfo	String	否	诊疗单元代码
+        --regDate	scheduleInfo	String	是	出诊日期，格式：YYYY-MM-DD
+        to_char(res.WORKDATE, 'yyyy-MM-dd') AS regDate,
+        --shiftCode	scheduleInfo	String	是	班别代码
+        CASE
+        when res.ENDTIME &lt; '12:00' then 'am'
+        when res.STARTTIME > '12:00' then 'pm'
+        end AS shiftCode,
+        --shiftName	scheduleInfo	String	是	班别名称，如上午、下午
+        CASE
+        when res.ENDTIME &lt; '12:00' then '上午'
+        when res.STARTTIME > '12:00' then '下午'
+        end AS shiftName,
+        --startTime	scheduleInfo	String	否	班别开始时间，格式：HH:MI
+        res.STARTTIME AS startTime,
+        --endTime	scheduleInfo	String	否	班别结束时间，格式：HH:MI
+        res.ENDTIME AS endTime,
+        --scheduleId	scheduleInfo	String	否	排班号
+        res.SUBSCRIBENO AS scheduleId,
+        --regStatus	scheduleInfo	String	是	出诊状态
+        --0-停诊
+        --1-出诊
+        --2-暂未开放
+        '1' AS regStatus,
+        --regTotalCount	scheduleInfo	String	是	该时段可预约的总号源数
+        '1' AS regTotalCount,
+        --regLeaveCount	scheduleInfo	String	是	该时段剩余号源数
+        decode(res.ISUSE,'1','0','0','1') AS regLeaveCount,
+        --regFee	scheduleInfo	String	是	挂号费(单位“分”)
+        '-' AS regFee,
+        --treatFee	scheduleInfo	String	是	诊疗费(单位“分”)
+        '-' AS treatFee,
+        --isTimeReg	scheduleInfo	String	是	是否有分时
+        --0-	否1-	是
+        '1' AS isTimeReg,
+        --hasRegisterType	scheduleInfo	String	否	是否有班别类型选择，空表示否
+        --0-否
+        --1-是
+        '1' AS hasRegisterType
+
+        from DGSTYYYPT_DATA_RESOURCE res ,DGSTYYYPT_USER us, SM_USERINFO usin
+        where res.PRODUCERID = us.PRODUCERID and us.USERID = usin.USERID
+        <if test=" hospitalId!=null and hospitalId !=''">
+
+        </if>
+        <if test=" deptId!=null and deptId !=''">
+            AND us.LOCID = #{deptId}
+        </if>
+        <if test=" deptType!=null and deptType !=''">
+
+        </if>
+        <if test=" doctorId!=null and doctorId !=''">
+            AND us.USERID = #{doctorId}
+        </if>
+        <if test=" searchCode!=null and searchCode !=''">
+            AND   us.NAME like '%'+#{searchCode}+'%'
+        </if>
+        <if test=" startDate!=null and startDate !=''">
+            AND to_char(res.WORKDATE, 'yyyy-MM-dd') > #{startDate}
+        </if>
+        <if test=" endDate!=null and endDate !=''">
+            AND to_char(res.WORKDATE, 'yyyy-MM-dd') &lt; #{endDate}
+        </if>
+
+
     </select>
 
 </mapper>

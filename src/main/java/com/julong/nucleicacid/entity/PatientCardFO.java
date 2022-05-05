@@ -4,13 +4,14 @@ package com.julong.nucleicacid.entity;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.baomidou.mybatisplus.extension.activerecord.Model;
 import lombok.Data;
 
 import java.io.Serializable;
 import java.util.Date;
 @Data
 @TableName( "PA_DATA_PATIENTCARD")
-public class PatientCardFO implements Serializable{
+public class PatientCardFO extends Model<PatientCardFO>  implements Serializable{
 	
 	/**
 	*PA_DATA_PATIENTCARD.OID type:NUMBER len:22 scale:0

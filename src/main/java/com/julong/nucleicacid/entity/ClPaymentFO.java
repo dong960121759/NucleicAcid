@@ -3,6 +3,7 @@ package com.julong.nucleicacid.entity;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.baomidou.mybatisplus.extension.activerecord.Model;
 import lombok.Data;
 
 import java.io.Serializable;
@@ -10,7 +11,7 @@ import java.math.BigDecimal;
 
 @Data
 @TableName("AB_CL_DATA_CHARGEPAYMENT")
-public class ClPaymentFO implements Serializable {
+public class ClPaymentFO extends Model<ClPaymentFO> implements Serializable {
 	
 
 	

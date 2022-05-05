@@ -3,6 +3,7 @@ package com.julong.nucleicacid.entity;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.baomidou.mybatisplus.extension.activerecord.Model;
 import lombok.Data;
 
 import java.io.Serializable;
@@ -10,7 +11,7 @@ import java.util.Date;
 
 @Data
 @TableName("SC_DATA_APPOINTMENT")
-public class AppointmentFO implements Serializable {
+public class AppointmentFO extends Model<AppointmentFO> implements Serializable {
 	public AppointmentFO(){
  
 		 

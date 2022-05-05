@@ -14,7 +14,7 @@ import java.util.Date;
 
 @Data
 @TableName("PC_CL_DATA_RECIPEENTRY")
-public class ClRecentryFO implements Serializable {
+public class ClRecentryFO  extends Model<>  implements Serializable {
 
     public ClRecentryFO() {
         isupload = "0";

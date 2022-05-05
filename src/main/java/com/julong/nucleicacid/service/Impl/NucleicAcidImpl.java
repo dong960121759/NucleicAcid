@@ -130,7 +130,7 @@ public class NucleicAcidImpl implements NucleicAcid {
     }
     /**
      * 获得出生日期
-     * 
+     *
      */
     private Date getBirthdayByIDNO(String id){
         Date birthD = null;
@@ -180,7 +180,7 @@ public class NucleicAcidImpl implements NucleicAcid {
     }
     /**
      * 生成卡号
-     * 
+     *
      */
     private String smNoGenerate(Long noType) {
 
@@ -279,6 +279,20 @@ public class NucleicAcidImpl implements NucleicAcid {
     }
 
     /**
+     * 2.1.2.2 住院患者信息查询
+     * 接口	baseinfo.getInpatientInfo
+     * 说明	通过本接口查询患者历次住院基本信息。
+     * healthCardNo、inpatientId两者不会同时为空，至少会有一个。
+     *
+     * @param xmlToPojo
+     * @return
+     */
+    @Override
+    public ResultOut<InPatientInfoOutSet> getInpatientInfo(InpatientInfoIn xmlToPojo) {
+        return null;
+    }
+
+    /**
      * 2.2.1.1 门诊出诊科室信息查询
      * 接口代码	appointment.getDeptInfo
      * 说明	通过本接口获取指定日期范围内的门诊可预约科室列表信息。
@@ -302,7 +316,36 @@ public class NucleicAcidImpl implements NucleicAcid {
             returnFO.setResultDesc("") ;
         }else {
             returnFO.setResultCode(KingDeeCodeInfo.FAILED);
-            returnFO.setResultDesc("查询核酸检测预约项目类型失败！") ;
+            returnFO.setResultDesc("查询门诊出诊科室信息失败！") ;
+        }
+        return returnFO;
+    }
+
+    /**
+     * 2.2.1.2 医生出诊信息查询
+     * <p>
+     * 接口代码	appointment.getScheduleInfo
+     * 说明	通过本接口获取获取某个科室或者某个医生在某个日期范围内的排班信息以及号源信息。如果传入searchCode，则优先使用searchCode进行搜索；如果searchCode为空，则deptId和doctorId不会同时为空
+     *
+     * @param scheduleInfoIn
+     * @return
+     */
+    @Override
+    public ResultOut<GetScheduleInfoOutSet> getScheduleInfo(GetScheduleInfoIn scheduleInfoIn) {
+
+
+        ResultOut<GetScheduleInfoOutSet> returnFO= new ResultOut<>();
+        returnFO.setResultCode(KingDeeCodeInfo.FAILED);
+        List<GetScheduleInfoOutSet> getScheduleInfoOutSets = nucleicAcidMapper.getScheduleInfo(scheduleInfoIn);
+        if (getScheduleInfoOutSets!=null && getScheduleInfoOutSets.size()>0) {
+
+            returnFO.setSet(getScheduleInfoOutSets);
+
+            returnFO.setResultCode(KingDeeCodeInfo.SUCCESS);
+            returnFO.setResultDesc("") ;
+        }else {
+            returnFO.setResultCode(KingDeeCodeInfo.FAILED);
+            returnFO.setResultDesc("医生出诊信息查询失败！") ;
         }
         return returnFO;
     }
@@ -326,13 +369,14 @@ public class NucleicAcidImpl implements NucleicAcid {
             return newPatientOut;
         }
         try {
+            PatientinfoFO patientinfoFO = new PatientinfoFO();
             //1.判断是否已建过卡，按身份证号查询
             QueryWrapper<PatientinfoFO> queryWrapper = new QueryWrapper<>();
             queryWrapper.eq("ISDELETE", "0");
             queryWrapper.eq("IDNO", newPatientIn.getIdCardNo().trim());
             //queryWrapper.eq("NAME", newPatientIn.getPatientName().trim());
             System.out.println(newPatientIn.getPatientName().trim());
-            List<PatientinfoFO> list = patientinfoFOMapper.selectList(queryWrapper);
+            List<PatientinfoFO> list = patientinfoFO.selectList(queryWrapper);
             System.out.println(list.size());
             if (list.size() > 0) {
                 newPatientOut = new CreateNewPatientOut();

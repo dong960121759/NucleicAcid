@@ -48,10 +48,17 @@ public class NucleicAcidController {
             case "baseinfo.getOutpatientInfo":
                 //2.1.2.1 门诊患者基本信息查
                 return XmlUtil.pojoToXml(nucleicAcidImpl.getOutpatientInfo((OutpatientInfoIn) XmlUtil.xmlToPojo(OutpatientInfoIn.class, inXml)));
+            case "baseinfo.getInpatientInfo":
+                //2.1.2.2 住院患者信息查询
+                return XmlUtil.pojoToXml(nucleicAcidImpl.getInpatientInfo((InpatientInfoIn) XmlUtil.xmlToPojo(InpatientInfoIn.class, inXml)));
+
             //2.2.1	预约挂号
             case "appointment.getDeptInfo":
                 //2.2.1.1 门诊出诊科室信息查询
                 return XmlUtil.pojoToXml(nucleicAcidImpl.getDeptInfoApp((GetDeptInfoIn) XmlUtil.xmlToPojo(GetDeptInfoIn.class, inXml)));
+            case "appointment.getScheduleInfo":
+                //2.2.1.2 医生出诊信息查询
+                return XmlUtil.pojoToXml(nucleicAcidImpl.getScheduleInfo((GetScheduleInfoIn) XmlUtil.xmlToPojo(GetScheduleInfoIn.class, inXml)));
             case "user.createNewPatient":
                 //2.2.4.1在线建卡
                 return XmlUtil.pojoToXml(nucleicAcidImpl.createNewPatient((CreateNewPatientIn) XmlUtil.xmlToPojo(CreateNewPatientIn.class, inXml)));

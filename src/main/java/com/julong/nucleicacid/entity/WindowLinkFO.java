@@ -6,6 +6,7 @@ package com.julong.nucleicacid.entity;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.baomidou.mybatisplus.extension.activerecord.Model;
 import lombok.Data;
 
 import java.io.Serializable;
@@ -13,7 +14,7 @@ import java.io.Serializable;
 
 @Data
 @TableName("Om_WindowLink")
-public class WindowLinkFO implements Serializable {
+public class WindowLinkFO extends Model<WindowLinkFO> implements Serializable {
 
 
 	@TableId("OID" )

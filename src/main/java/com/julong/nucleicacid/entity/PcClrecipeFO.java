@@ -12,7 +12,7 @@ import java.util.Date;
 
 @Data
 @TableName("PC_CL_DATA_RECIPE")
-public class PcClrecipeFO implements Serializable {
+public class PcClrecipeFO  extends Model<>  implements Serializable {
 
     /**
      * HYHIS_PC_CL_DATA_RECIPE.RECIPEID type:NUMBER len:22 scale:0  Comments:

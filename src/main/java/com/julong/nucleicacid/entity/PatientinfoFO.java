@@ -1,6 +1,7 @@
 package com.julong.nucleicacid.entity;
 
 import com.baomidou.mybatisplus.annotation.*;
+import com.baomidou.mybatisplus.extension.activerecord.Model;
 import lombok.Data;
 
 import java.io.Serializable;
@@ -10,7 +11,7 @@ import java.util.Date;
 
 @Data
 @TableName( "PA_DATA_PATIENT")
-public class PatientinfoFO implements Serializable{
+public class PatientinfoFO extends Model<PatientinfoFO> implements Serializable {
 
 	    
 	/**

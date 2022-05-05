@@ -191,4 +191,14 @@ public interface NucleicAcidMapper {
      * @return
      */
     List<GetDeptInfoAppOutSet> getDeptInfoApp(GetDeptInfoIn getDeptInfoIn);
+    /**
+     * 2.2.1.2 医生出诊信息查询
+     * <p>
+     * 接口代码	appointment.getScheduleInfo
+     * 说明	通过本接口获取获取某个科室或者某个医生在某个日期范围内的排班信息以及号源信息。如果传入searchCode，则优先使用searchCode进行搜索；如果searchCode为空，则deptId和doctorId不会同时为空
+     *
+     * @param scheduleInfoIn
+     * @return
+     */
+    List<GetScheduleInfoOutSet> getScheduleInfo(GetScheduleInfoIn scheduleInfoIn);
 }

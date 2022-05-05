@@ -3,6 +3,7 @@ package com.julong.nucleicacid.entity;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.baomidou.mybatisplus.extension.activerecord.Model;
 import lombok.Data;
 
 import java.math.BigDecimal;
@@ -10,7 +11,7 @@ import java.util.Date;
 
 @Data
 @TableName( "AB_ORDERGROUP")
-public class OrderGroupFO{
+public class OrderGroupFO  extends Model<OrderGroupFO> {
 	public OrderGroupFO(){
 	
 	}

@@ -3,6 +3,7 @@ package com.julong.nucleicacid.entity;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.baomidou.mybatisplus.extension.activerecord.Model;
 import lombok.Data;
 
 import java.io.Serializable;
@@ -11,7 +12,7 @@ import java.util.Date;
 
 @Data
 @TableName("AB_CL_DATA_INVOICE")
-public class ClInvoiceFO implements Serializable{ 
+public class ClInvoiceFO  extends Model<ClInvoiceFO> implements Serializable{
 	
 	/**
 	*AB_CL_DATA_INVOICE.INVOICEID type:NUMBER len:22 scale:0

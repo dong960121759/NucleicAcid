@@ -5,5 +5,5 @@ import com.julong.nucleicacid.entity.MobilePayHisPayNoFO;
 import org.apache.ibatis.annotations.Mapper;
 
 @Mapper
-public interface MobilePayHisPayNoFOMapper extends BaseMapper<MobilePayHisPayNoFO> {
+public interface MobilePayHisPayNoFOMapper  extends BaseMapper<MobilePayHisPayNoFO> {
 }
